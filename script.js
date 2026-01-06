@@ -131,7 +131,7 @@ function loadGameState() {
 function setupModal() {
     const modal = document.getElementById('help-modal');
     const btn = document.getElementById('help-btn');
-    const span = document.getElementsByClassName('close')[0];
+    const span = modal.querySelector('.close');
     
     btn.onclick = function() {
         modal.style.display = 'block';
@@ -172,8 +172,6 @@ function init() {
     document.getElementById('reset-btn').addEventListener('click', resetGame);
     setupModal();
     setupPlayerNames();
-    
-    console.log('Mandala Point Counter initialized successfully!');
 }
 
 // Start the app when DOM is ready
