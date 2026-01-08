@@ -4,18 +4,19 @@ A web-based tool to help count points while playing the board game **Mandala** o
 
 ## About Mandala
 
-Mandala is a two-player card game featuring 6 colors (Red, Green, Blue, Yellow, Purple, Orange), with each color having cards numbered 1-9. Players collect cards and score points based on the unique cards they gather in their mountain (scoring pile).
+Mandala is a two-player card game featuring 6 colors (Red, Green, Black, Yellow, Purple, Orange), with each color having cards numbered 1-10. Players collect cards and score points based on the cards they gather in their cup (scoring pile).
 
 ### Scoring Rules
 
-- For each color, you score points equal to the **number of unique cards** you have in that color
-- Your total score is the sum of points from all six colors
-- Example: If you have 3 red cards, 5 blue cards, and 2 yellow cards, your score is 3 + 5 + 2 = 10 points
+- Each player builds a river of colors in the order they gain them.
+- The 1st color in your river is worth 1 point per card, the 2nd is worth 2, up to 6.
+- Example: If Red is 1st and you have 3 Red cards you score 3×1 = 3; if Yellow is 2nd and you have 2 Yellow cards you score 2×2 = 4.
 
 ## Features
 
 ✨ **Easy Card Tracking**: Simple +/- buttons to track cards for each color  
 📊 **Real-time Scoring**: Automatically calculates and displays scores  
+🧾 **Log Parsing**: Paste Board Game Arena logs to auto-fill cup totals  
 💾 **Auto-save**: Your game progress is saved automatically in your browser  
 🎯 **Clean Interface**: Intuitive design for easy use during gameplay  
 📱 **Responsive**: Works on desktop, tablet, and mobile devices  
@@ -26,8 +27,9 @@ Mandala is a two-player card game featuring 6 colors (Red, Green, Blue, Yellow, 
 
 1. **Open the Tool**: Simply open `index.html` in your web browser
 2. **Enter Player Names**: (Optional) Enter custom names for each player
-3. **Track Cards**: As players collect cards in their mountains, click the **+** button next to the corresponding color
-4. **View Scores**: Scores are automatically calculated and displayed for each player
+3. **Track Cards**: As players collect cards in their cups, click the **+** button next to the corresponding color
+4. **Parse Logs**: Paste the Board Game Arena log into the parser to auto-fill cup totals and scores
+5. **View Scores**: Scores are automatically calculated and displayed for each player
 
 ### During Gameplay
 
@@ -38,8 +40,8 @@ Mandala is a two-player card game featuring 6 colors (Red, Green, Blue, Yellow, 
 
 ### Tips
 
-- Track cards as they enter each player's mountain (scoring pile)
-- The tool prevents you from exceeding 9 cards per color (the maximum in the game)
+- Track cards as they enter each player's cup (scoring pile)
+- The tool prevents you from exceeding 10 cards per color (the maximum in the game)
 - Your progress is automatically saved, so you can close and reopen the tool without losing data
 - Use this tool alongside your game on BoardGameArena.com for accurate scoring
 
