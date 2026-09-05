@@ -1,0 +1,236 @@
+/* Mandala Helper HUD for BoardGameArena */
+#mandala-hud-container {
+    position: fixed;
+    top: 60px;
+    right: 18px;
+    z-index: 999999;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    color: #e0e0e0;
+    pointer-events: none;
+}
+
+.mandala-hud {
+    pointer-events: auto;
+    width: 320px;
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid #444;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mandala-hud-header {
+    background: rgba(18, 18, 18, 0.9);
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #383838;
+    user-select: none;
+}
+
+.mandala-hud-title {
+    font-weight: bold;
+    font-size: 13px;
+    color: #bb86fc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mandala-hud-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.mandala-hud-btn {
+    background: #333;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.mandala-hud-btn:hover {
+    background: #444;
+    border-color: #bb86fc;
+}
+
+.mandala-hud-body {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Scores Section */
+.mandala-hud-scores {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #202020;
+    border-radius: 6px;
+    padding: 8px;
+    border: 1px solid #333;
+}
+
+.mandala-hud-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mandala-hud-player-name {
+    font-weight: bold;
+    font-size: 12px;
+    color: #fff;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mandala-hud-player-stats {
+    font-size: 12px;
+}
+
+.mandala-hud-score-val {
+    font-weight: bold;
+    color: #bb86fc;
+}
+
+.mandala-hud-river-row {
+    display: flex;
+    gap: 3px;
+    margin-top: 2px;
+}
+
+.mandala-hud-river-slot {
+    flex: 1;
+    height: 18px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+    background: #2b2b2b;
+    border: 1px solid #3a3a3a;
+}
+
+.mandala-hud-river-slot.empty {
+    color: #555;
+    background: #1e1e1e;
+    border: 1px dashed #333;
+}
+
+/* Tracker Section */
+.mandala-hud-tracker {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mandala-hud-tracker-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #aaa;
+    font-weight: 600;
+}
+
+.mandala-hud-tracker-item {
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 5px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.mandala-hud-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mandala-hud-color-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.mandala-hud-color-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.mandala-hud-item-counts {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.mandala-hud-item-counts strong {
+    color: #fff;
+}
+
+.mandala-hud-bar {
+    width: 100%;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.mandala-hud-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+}
+
+.mandala-hud-item-bottom {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #999;
+}
+
+.mandala-hud-item-bottom strong {
+    color: #bb86fc;
+}
+
+/* Minimized Floating Pill */
+.mandala-hud-pill {
+    pointer-events: auto;
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid #bb86fc;
+    color: #bb86fc;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.15s;
+}
+
+.mandala-hud-pill:hover {
+    transform: scale(1.05);
+    background: #2a2a2a;
+}

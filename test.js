@@ -51,7 +51,7 @@ runTest('River order follows first acquisition', () => {
     assert.strictEqual(MandalaCore.calculateTotalScore(counts, order, colorNames), 2 * 1 + 2 * 2 + 3 * 3);
 });
 
-runTest('Removing a color to zero removes it from river order', () => {
+runTest('Removing a color to zero keeps it in river order (zero-cup river)', () => {
     const counts = createCounts(colorNames);
     let order = [];
 
@@ -61,17 +61,18 @@ runTest('Removing a color to zero removes it from river order', () => {
     assert.deepStrictEqual(order, ['Red', 'Yellow', 'Black']);
 
     ({ order } = changeCount(counts, order, 'Yellow', -2));
-    assert.deepStrictEqual(order, ['Red', 'Black']);
-    assert.strictEqual(MandalaCore.calculateTotalScore(counts, order, colorNames), 2 * 1 + 3 * 2);
+    assert.deepStrictEqual(order, ['Red', 'Yellow', 'Black']);
+    // Red: 2 * 1, Yellow: 0 * 2, Black: 3 * 3 = 11
+    assert.strictEqual(MandalaCore.calculateTotalScore(counts, order, colorNames), 2 * 1 + 0 * 2 + 3 * 3);
 });
 
-runTest('sanitizeRiverOrder de-dupes and drops zero counts', () => {
+runTest('sanitizeRiverOrder de-dupes and preserves colors in order', () => {
     const counts = createCounts(colorNames);
     counts.Black = 2;
     counts.Red = 1;
     counts.Green = 0;
     const sanitized = MandalaCore.sanitizeRiverOrder(['Blue', 'Red', 'Red', 'Green'], counts, colorNames);
-    assert.deepStrictEqual(sanitized, ['Black', 'Red']);
+    assert.deepStrictEqual(sanitized, ['Black', 'Red', 'Green']);
 });
 
 runTest('calculateTotalScore ignores unknown colors when colorNames provided', () => {
@@ -82,3 +83,32 @@ runTest('calculateTotalScore ignores unknown colors when colorNames provided', (
     assert.strictEqual(MandalaCore.calculateTotalScore(counts, order, colorNames), 1);
 });
 
+runTest('calculateCardCountsAndProbabilities initial state has 18 per color and equal draw probability', () => {
+    const result = MandalaCore.calculateCardCountsAndProbabilities({
+        colors: colorNames,
+        seenMap: { Red: 0, Green: 0, Black: 0, Yellow: 0, Purple: 0, Orange: 0 }
+    });
+
+    assert.strictEqual(result.totalSeen, 0);
+    assert.strictEqual(result.totalUnseen, 108);
+    colorNames.forEach(c => {
+        assert.strictEqual(result.seen[c], 0);
+        assert.strictEqual(result.remaining[c], 18);
+        assert.strictEqual(result.drawProbability[c], 16.7); // 18/108 = 16.666...%
+    });
+});
+
+runTest('calculateCardCountsAndProbabilities correctly calculates probabilities and unseen total', () => {
+    const result = MandalaCore.calculateCardCountsAndProbabilities({
+        colors: colorNames,
+        seenMap: { Red: 8, Green: 5, Black: 13, Yellow: 8, Purple: 7, Orange: 5 }
+    });
+
+    assert.strictEqual(result.totalSeen, 46);
+    assert.strictEqual(result.totalUnseen, 62);
+    assert.strictEqual(result.remaining.Black, 5);
+    assert.strictEqual(result.remaining.Green, 13);
+    assert.strictEqual(result.drawProbability.Black, 8.1); // 5 / 62 = 8.06%
+    assert.strictEqual(result.drawProbability.Green, 21.0); // 13 / 62 = 20.96%
+    assert(result.hiddenOdds.Green > result.hiddenOdds.Black);
+});

@@ -1,13 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-
-// --- Mocking MandalaCore (since we can't easily require the browser-targeted mandala-core.js if it assumes 'self') ---
-// But wait, mandala-core.js uses UMD:
-// if (typeof module === 'object' && module.exports) { module.exports = factory(); }
-// So we CAN require it. Use the actual updated file.
 const MandalaCore = require('./mandala-core');
 
-// --- Copied parts from script.js that we need for the test context (helper vars) ---
 const numberWords = new Map([
     ['one', 1], ['two', 2], ['three', 3], ['four', 4], ['five', 5],
     ['six', 6], ['seven', 7], ['eight', 8], ['nine', 9], ['ten', 10]
@@ -32,7 +26,6 @@ function resolveColor(rawColor) {
     return colorAliases.get(lower) || null;
 }
 
-// --- The NEW parseLogText Logic (mirrored from script.js update) ---
 function parseLogText(logText, options) {
     const newestFirst = !options || options.newestFirst !== false;
     const lines = logText
@@ -43,75 +36,50 @@ function parseLogText(logText, options) {
         lines.reverse();
     }
 
-    // Regex for "adds to Cup"
-    const cupRegex = /^(?<player>.+?)\s+adds\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?\s+to\s+the\s+Cup/i;
-    // Regex for "adds to River"
-    const riverRegex = /^(?<player>.+?)\s+adds\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?\s+to\s+the\s+River/i;
-    // Regex for "claims" (fallback)
-    const claimRegex = /^(?<player>.+?)\s+claims\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?/i;
+    const cupRegex = /^(?:move\s+\d+:?\s*)?(?<player>.+?)\s+adds\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?\s+to\s+the\s+Cup/i;
+    const riverRegex = /^(?:move\s+\d+:?\s*)?(?<player>.+?)\s+adds\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?\s+to\s+the\s+River/i;
+    const mountainRegex = /^(?:move\s+\d+:?\s*)?(?<player>.+?)\s+builds\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?\s+in\s+Mountain/i;
+    const fieldRegex = /^(?:move\s+\d+:?\s*)?(?<player>.+?)\s+grows\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card(?:\(s\))?\s+in\s+Field/i;
+    const discardRegex = /^(?:move\s+\d+:?\s*)?(?<player>.+?)\s+discards\s+(?<count>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?<color>[a-z]+)\s+card/i;
 
     const events = [];
-    const hasDetailedLogs = lines.some(line => cupRegex.test(line) || riverRegex.test(line));
-
-    // Debug: Print count of lines
-    console.log(`Processing ${lines.length} lines.`);
-
     lines.forEach(line => {
-        let match;
-
-        // Try Cup
-        match = line.match(cupRegex);
-        if (match && match.groups) {
-            console.log(`Matched Cup: ${line}`);
-            events.push({
-                player: match.groups.player,
-                count: resolveCount(match.groups.count),
-                color: resolveColor(match.groups.color),
-                type: 'cup'
-            });
+        let m = line.match(cupRegex);
+        if (m && m.groups) {
+            events.push({ player: m.groups.player.trim(), count: resolveCount(m.groups.count), color: resolveColor(m.groups.color), type: 'cup' });
             return;
         }
-
-        // Try River
-        match = line.match(riverRegex);
-        if (match && match.groups) {
-            console.log(`Matched River: ${line}`);
-            events.push({
-                player: match.groups.player,
-                count: resolveCount(match.groups.count),
-                color: resolveColor(match.groups.color),
-                type: 'river'
-            });
+        m = line.match(riverRegex);
+        if (m && m.groups) {
+            events.push({ player: m.groups.player.trim(), count: resolveCount(m.groups.count), color: resolveColor(m.groups.color), type: 'river' });
             return;
         }
-
-        // Fallback to Claims ONLY if no detailed logs detected
-        if (!hasDetailedLogs) {
-            match = line.match(claimRegex);
-            if (match && match.groups) {
-                events.push({
-                    player: match.groups.player,
-                    count: resolveCount(match.groups.count),
-                    color: resolveColor(match.groups.color),
-                    type: 'cup'
-                });
-            }
+        m = line.match(mountainRegex);
+        if (m && m.groups) {
+            events.push({ player: m.groups.player.trim(), count: resolveCount(m.groups.count), color: resolveColor(m.groups.color), type: 'mountain' });
+            return;
+        }
+        m = line.match(fieldRegex);
+        if (m && m.groups) {
+            events.push({ player: m.groups.player.trim(), count: resolveCount(m.groups.count), color: resolveColor(m.groups.color), type: 'field' });
+            return;
+        }
+        m = line.match(discardRegex);
+        if (m && m.groups) {
+            events.push({ player: m.groups.player.trim(), count: resolveCount(m.groups.count), color: resolveColor(m.groups.color), type: 'discard' });
         }
     });
 
     return events.filter(entry => entry.count > 0 && entry.color);
 }
 
-// --- Main Test Execution ---
-
 const logPath = path.join(__dirname, 'example-text');
 const logContent = fs.readFileSync(logPath, 'utf8');
 
 console.log(`--- Parsing ${logPath} ---`);
 const result = parseLogText(logContent, { newestFirst: true });
-console.log(`Found ${result.length} events.`);
+console.log(`Found ${result.length} events across cup, river, mountain, field, and discards.`);
 
-// Process events to rebuild state
 const gameState = {
     jayadevhaddadi: { Red: 0, Green: 0, Black: 0, Yellow: 0, Purple: 0, Orange: 0 },
     MoSpinach: { Red: 0, Green: 0, Black: 0, Yellow: 0, Purple: 0, Orange: 0 }
@@ -120,28 +88,29 @@ const riverOrder = {
     jayadevhaddadi: [],
     MoSpinach: []
 };
-
-// Mock mapping
-const mapping = new Map();
-mapping.set('jayadevhaddadi', 'jayadevhaddadi');
-mapping.set('MoSpinach', 'MoSpinach');
-
-function assignPlayerKey(name) { return mapping.get(name); }
+const seenMap = { Red: 0, Green: 0, Black: 0, Yellow: 0, Purple: 0, Orange: 0 };
 
 result.forEach(entry => {
-    const key = assignPlayerKey(entry.player);
-    if (!key) return;
-
     if (entry.type === 'cup') {
-        gameState[key][entry.color] += entry.count;
-        if (riverOrder[key].indexOf(entry.color) === -1) {
-            riverOrder[key].push(entry.color);
+        gameState[entry.player][entry.color] += entry.count;
+        if (!riverOrder[entry.player].includes(entry.color)) {
+            riverOrder[entry.player].push(entry.color);
         }
     } else if (entry.type === 'river') {
-        if (riverOrder[key].indexOf(entry.color) === -1) {
-            riverOrder[key].push(entry.color);
+        if (!riverOrder[entry.player].includes(entry.color)) {
+            riverOrder[entry.player].push(entry.color);
         }
+    } else if (entry.type === 'mountain' || entry.type === 'field' || entry.type === 'discard') {
+        seenMap[entry.color] += entry.count;
     }
+});
+
+// Add your cup counts to seenMap
+// (from example-text: Black 4, Green 1, Purple 0, Yellow 1, Orange 2, Red 0)
+const yourCup = { Black: 4, Green: 1, Purple: 0, Yellow: 1, Orange: 2, Red: 0 };
+Object.entries(yourCup).forEach(([c, cnt]) => {
+    gameState.jayadevhaddadi[c] = cnt;
+    seenMap[c] += cnt;
 });
 
 console.log('\n--- Final Scores ---');
@@ -152,52 +121,15 @@ console.log('\n--- Final Scores ---');
     console.log(`  Cup:   ${JSON.stringify(gameState[player])}`);
 });
 
-// We expect specific river orders and scores.
-// Based on log analysis (previous turn):
-// jayadevhaddadi River should include colors added even if not in cup.
-// From manual review of log:
-// jayadevhaddadi adds green to Cup, green to River.
-// jayadevhaddadi adds black to Cup.
-// jayadevhaddadi adds orange to Cup.
-// jayadevhaddadi adds black to River.
-// jayadevhaddadi adds orange to River.
-// jayadevhaddadi adds purple to River.
-// jayadevhaddadi adds yellow to Cup, yellow to River.
-// ... wait, the log is chronological if we reversed it?
-// "MoSpinach adds one black card to the River" (11:02 PM)
-// "jayadevhaddadi adds 1 yellow card(s) to the Cup" (09:49 PM)
-// The log has dates.
-// If the script reverses (newestFirst=true), it goes Old -> New.
-// So we should see accurate replay.
+console.log('\n--- Card Counting & Probabilities (18 Cards / Color) ---');
+const stats = MandalaCore.calculateCardCountsAndProbabilities({ seenMap });
+console.log(`Total Seen: ${stats.totalSeen} / 108 | Total Unseen: ${stats.totalUnseen} / 108`);
+Object.keys(seenMap).forEach(c => {
+    console.log(`${c.padEnd(8)}: Seen ${stats.seen[c]}/18 | Left: ${stats.remaining[c]} | Next Draw: ${stats.drawProbability[c]}% | In Opp. 2-Hidden: ${stats.hiddenOdds[c]}%`);
+});
 
-console.log("\n--- Verification ---");
-// Check logic: Can we have a river item with 0 cup items?
-const testRiverOnly = riverOrder['MoSpinach'].filter(c => gameState['MoSpinach'][c] === 0);
-if (testRiverOnly.length > 0) {
-    console.log(`PASS: Found colors in River with 0 Cup count: ${testRiverOnly.join(', ')}`);
+if (stats.totalUnseen === 62) {
+    console.log('\nPASS: Accurately calculated 62 unseen cards from example-text match!');
 } else {
-    // If none found, maybe the sample game just happened to always have cup cards?
-    // Let's force a test case.
-    console.log("INFO: No natural 0-cup River items in this specific game end state.");
-}
-
-// Force test the Core Logic fix
-console.log("\n--- Testing Core Logic Fix ---");
-const mockOrder = [];
-const mockCounts = { Red: 0 };
-// Add Red to river with 0 count
-const updatedOrder = MandalaCore.syncRiverOrder(mockOrder, mockCounts, 'Red');
-// Wait, syncRiverOrder usage in my fix:
-// if (count > 0 && index === -1) push
-// if (count === 0) do nothing (don't remove)
-// So calling it with count=0 on empty list won't add it.
-// That's correct for "syncRiverOrder" used by +/- buttons.
-// BUT for parser, we manually pushed.
-// Testing "Don't Remove":
-const orderWithRed = ['Red'];
-const finalOrder = MandalaCore.syncRiverOrder(orderWithRed, mockCounts, 'Red'); // count is 0
-if (finalOrder.includes('Red')) {
-    console.log("PASS: syncRiverOrder did NOT remove Red when count is 0.");
-} else {
-    console.log("FAIL: syncRiverOrder removed Red when count is 0.");
+    console.log(`\nFAIL: Expected 62 unseen cards, got ${stats.totalUnseen}`);
 }

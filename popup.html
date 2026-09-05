@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mandala Helper</title>
+    <style>
+        body {
+            width: 260px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 14px;
+        }
+
+        h2 {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+            color: #bb86fc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        p {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.4;
+            margin: 0 0 12px 0;
+        }
+
+        .status-badge {
+            background: #283593;
+            color: #90caf9;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            background: #bb86fc;
+            color: #000;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            box-sizing: border-box;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>🎴 Mandala Helper</h2>
+    <div class="status-badge">Live BGA Assistant Ready</div>
+    <p>
+        The assistant automatically tracks cards, calculates scores, and shows draw probabilities live on BoardGameArena table screens!
+    </p>
+    <button class="btn" id="open-app-btn">Open Full Web App</button>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
