@@ -1,0 +1,30 @@
+{
+    "100": {
+        "name": "Colorblind support",
+        "needReload": true,
+        "values": {
+            "1": {
+                "name": "None",
+                "cssPref": ""
+            },
+            "2": {
+                "name": "Numbers",
+                "cssPref": "colorblind"
+            }
+        },
+        "default": 1
+    },
+    "101": {
+        "name": "Confirm card placement",
+        "needReload": false,
+        "values": {
+            "1": {
+                "name": "Enabled (Ask confirmation)"
+            },
+            "2": {
+                "name": "Disabled (Fast play)"
+            }
+        },
+        "default": 1
+    }
+}
