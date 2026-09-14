@@ -1,0 +1,17 @@
+{
+    "100": {
+        "name": "Colorblind support",
+        "needReload": true,
+        "values": {
+            "1": {
+                "name": "None",
+                "cssPref": ""
+            },
+            "2": {
+                "name": "Numbers",
+                "cssPref": "colorblind"
+            }
+        },
+        "default": 1
+    }
+}

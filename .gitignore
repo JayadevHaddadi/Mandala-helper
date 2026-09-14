@@ -17,3 +17,8 @@ desktop.ini
 *.tmp
 tmp/
 temp/
+
+# BGA Studio Credentials
+**/sftp.json
+bga_credentials.md
+
