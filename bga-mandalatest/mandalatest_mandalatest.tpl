@@ -68,29 +68,11 @@ var jstpl_player_panel = '<div class="mdl_player_panel_row"> \
                             <div id="p${id}_card_icon" class="mdl_cards_hand"></div> \
                             <span id="p${id}_card_nbr" class="mdl_card_counter"></span> \
                         </div>';
-var jstpl_player_panel_cup = '<div class="mdl_player_panel_row"> \
-                                <span style="font-weight:bold">${cupTitle}</span> \
+var jstpl_player_panel_cup = '<div class="mdl_player_panel_row mdl_cup_header_row"> \
+                                <span id="mdl_p${id}_cup_title" class="mdl_panel_cup_title" style="font-weight:bold">${cupTitle}</span> \
+                                <span id="p${id}_cup_nbr" style="display:none;"></span> \
                             </div> \
-                            <div class="mdl_player_panel_row mdl_panel_cards"> \
-                                <div class="mdl_panel_card"> \
-                                    <div id="mdl_p${id}_cup_black" class="mdl_card shadow mdl_black_card"></div><span id="mdl_p${id}_cup_black_nbr" class="mdl_card_counter">0</span> \
-                                </div> \
-                                <div class="mdl_panel_card"> \
-                                    <div id="mdl_p${id}_cup_green" class="mdl_card shadow mdl_green_card"></div><span id="mdl_p${id}_cup_green_nbr" class="mdl_card_counter">0</span> \
-                                </div> \
-                                <div class="mdl_panel_card"> \
-                                    <div id="mdl_p${id}_cup_purple" class="mdl_card shadow mdl_purple_card"></div><span id="mdl_p${id}_cup_purple_nbr" class="mdl_card_counter">0</span> \
-                                </div> \
-                                <div class="mdl_panel_card"> \
-                                    <div id="mdl_p${id}_cup_yellow" class="mdl_card shadow mdl_yellow_card"></div><span id="mdl_p${id}_cup_yellow_nbr" class="mdl_card_counter">0</span> \
-                                </div> \
-                                <div class="mdl_panel_card"> \
-                                    <div id="mdl_p${id}_cup_orange" class="mdl_card shadow mdl_orange_card"></div><span id="mdl_p${id}_cup_orange_nbr" class="mdl_card_counter">0</span> \
-                                </div> \
-                                <div class="mdl_panel_card"> \
-                                    <div id="mdl_p${id}_cup_red" class="mdl_card shadow mdl_red_card"></div><span id="mdl_p${id}_cup_red_nbr" class="mdl_card_counter">0</span> \
-                                </div> \
-                            </div>';
+                            <div id="mdl_p${id}_river_breakdown" class="mdl_river_breakdown_panel"></div>';
 
 var jstpl_flip_facedown_back = '<div id="mdl_flip_back" class="mdl_card mdl_facedown_card mdl_flip_back"></div>';
 

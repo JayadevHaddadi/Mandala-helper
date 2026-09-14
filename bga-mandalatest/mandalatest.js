@@ -50,6 +50,13 @@ function (dojo, declare, bgaHelp) {
             this.deckCounter;
             this.discardPileCounter;
 
+            // Live score tracking data
+            this.riverMultipliers = {};
+            this.riverSlots = {};
+            this.cupCardsCounts = {};
+            this.claimedCupCardsCounts = {};
+            this.hiddenCupCounts = {};
+
             // To show the card facedown or not
             this.showBack = false;
 
@@ -200,6 +207,11 @@ function (dojo, declare, bgaHelp) {
 
             // Setup game notifications to handle (see "setupNotifications" method below)
             this.setupNotifications();
+
+            // Initial live score calculation & badge update
+            this.updateLiveScores();
+            setTimeout(() => this.updateLiveScores(), 250);
+            setTimeout(() => this.updateLiveScores(), 1000);
 
             if (gamedatas.finalScore != null) {
                 this.scoreDlg = this.displayTableWindow(
@@ -457,20 +469,37 @@ function (dojo, declare, bgaHelp) {
             this.fields['field_2'][playerId].horizontal_overlap = this.getOverlap(this.fields['field_2'][playerId]);
 
             // Player river
+            this.riverMultipliers[playerId] = {};
+            this.riverSlots[playerId] = {};
             for (let i=1;i<=6;i++) {
-                Object.values(playerData["river_"+i]).forEach((elem) => {
+                var riverSlotCards = Object.values(playerData["river_"+i] || {});
+                if (riverSlotCards.length > 0) {
+                    this.riverMultipliers[playerId][riverSlotCards[0].type] = i;
+                    this.riverSlots[playerId][i] = riverSlotCards[0].type;
+                }
+                riverSlotCards.forEach((elem) => {
                     this.createCardInTarget(elem,'mdl_river_' + i + '_' + playerId);
                 });
             }
 
             // Player cup
             if (playerId == this.player_id) {
+                this.cupCardsCounts[playerId] = { red: 0, orange: 0, green: 0, yellow: 0, purple: 0, black: 0 };
                 var pos = 0;
-                Object.values(playerData.cup).forEach((elem) => {
+                Object.values(playerData.cup || {}).forEach((elem) => {
+                    this.cupCardsCounts[playerId][elem.type] = (this.cupCardsCounts[playerId][elem.type] || 0) + 1;
                     this.createCardInTarget(elem,'mdl_cup_' + this.player_id,true);
                 });
                 this.createCupTooltip();
             } else {
+                this.claimedCupCardsCounts[playerId] = { red: 0, orange: 0, green: 0, yellow: 0, purple: 0, black: 0 };
+                var claimedCards = Object.values(playerData.claimedCup || {});
+                claimedCards.forEach((elem) => {
+                    this.claimedCupCardsCounts[playerId][elem.type] = (this.claimedCupCardsCounts[playerId][elem.type] || 0) + 1;
+                });
+                var totalInCup = playerData.cardsInCup !== undefined ? playerData.cardsInCup : 2;
+                this.hiddenCupCounts[playerId] = Math.max(0, totalInCup - claimedCards.length);
+
                 for (let i=0;i<playerData.cardsInCup;i++) {
                     dojo.place(this.format_block('jstpl_card', {
                         id: playerId + '_' + i,
@@ -487,30 +516,25 @@ function (dojo, declare, bgaHelp) {
                 dojo.place(this.format_block('jstpl_player_panel', {
                     id: playerId
                 }), target);
-                if (this.player_id == playerId) {
-                    dojo.place(this.format_block('jstpl_player_panel_cup', {
-                        cupTitle: _('Your cup:'),
-                        id: playerId
-                    }), target);
 
-                    var cupCards = Object.values(playerData.cup);
-                    this.cupsColorCounter[playerId] = [];
-                    this.colors.forEach((color) => {
-                        var colorCards = cupCards.filter((card) => card.type == color);
-                        this.cupsColorCounter[playerId][color] = new ebg.counter();
-                        this.cupsColorCounter[playerId][color].create("mdl_p"+playerId+"_cup_"+color+"_nbr");
-                        this.cupsColorCounter[playerId][color].setValue(colorCards.length);
-                    });
+                var playerName = player.name || (this.gamedatas.players[playerId] ? this.gamedatas.players[playerId].name : 'Player');
+                dojo.place(this.format_block('jstpl_player_panel_cup', {
+                    cupTitle: playerName + "'s cup",
+                    id: playerId
+                }), target);
+
+                // Add (+2 ❓) next to standard BGA player score
+                if (!$('p' + playerId + '_score_hidden')) {
+                    var scoreEl = $('player_score_' + playerId);
+                    if (scoreEl) {
+                        dojo.place('<span id="p' + playerId + '_score_hidden" class="mdl_score_hidden_vp" style="display:none;">(+2 ❓)</span>', scoreEl, 'after');
+                    }
                 }
+
                 this.handsCounter[playerId] = [];
                 this.handsCounter[playerId] = new ebg.counter();
                 this.handsCounter[playerId].create("p"+playerId+"_card_nbr");
                 this.handsCounter[playerId].setValue(playerData.cardsInHand);
-
-                // this.cupsCounter[playerId] = [];
-                // this.cupsCounter[playerId] = new ebg.counter();
-                // this.cupsCounter[playerId].create("p"+playerId+"_cup_nbr");
-                // this.cupsCounter[playerId].setValue(playerData.cardsInCup);
 
                 this.addTooltip('p'+playerId+'_card_icon',_('Cards in hand'),'');
             }
@@ -1406,6 +1430,14 @@ function (dojo, declare, bgaHelp) {
                 this.mountains[notif.args.mountain].removeFromStockById(animateCard.id);
                 this.selectedStock = this.mountains[notif.args.mountain];
                 this.updateStockOverlap();
+
+                // Update river multiplier and slot for live score tracking
+                var spaceNum = parseInt(notif.args.riverSpace.replace('river_', ''), 10);
+                if (!this.riverMultipliers[playerId]) this.riverMultipliers[playerId] = {};
+                if (!this.riverSlots[playerId]) this.riverSlots[playerId] = {};
+                this.riverMultipliers[playerId][card.type] = spaceNum;
+                this.riverSlots[playerId][spaceNum] = card.type;
+                this.updateLiveScores();
             }
             anim.play();
         },
@@ -1428,9 +1460,18 @@ function (dojo, declare, bgaHelp) {
 
                 var anim = this.slideToObjectPos(cardDivId,'mdl_cup_' + playerId,0,0);
                 anim.onEnd = () => {
-                    if (this.player_id == playerId) {
+                    if (this.cupsColorCounter[playerId] && this.cupsColorCounter[playerId][card.type]) {
                         this.cupsColorCounter[playerId][card.type].incValue(1);
                     }
+                    if (this.player_id == playerId) {
+                        if (!this.cupCardsCounts[playerId]) this.cupCardsCounts[playerId] = {};
+                        this.cupCardsCounts[playerId][card.type] = (this.cupCardsCounts[playerId][card.type] || 0) + 1;
+                    } else {
+                        if (!this.claimedCupCardsCounts[playerId]) this.claimedCupCardsCounts[playerId] = {};
+                        this.claimedCupCardsCounts[playerId][card.type] = (this.claimedCupCardsCounts[playerId][card.type] || 0) + 1;
+                    }
+                    this.updateLiveScores();
+
                     dojo.addClass('mdl_'+card.id+'_flip_ph','mdl_flipped'); 
                     // Give time for the flip animation
                     this.sleep(500).then(() => {
@@ -1556,6 +1597,159 @@ function (dojo, declare, bgaHelp) {
                 dojo.removeClass(elem.id,'mdl_masteryoga_active');
             })
             dojo.addClass('mdl_mandala_'+notif.args.nbr,'mdl_masteryoga_active');
+        },
+
+        ///////////////////////////////////////////////////
+        //// Live Score Tracker methods
+
+        onPreferenceChange: function(prefId, prefValue) {
+            if (prefId == 102) {
+                var display = (prefValue == 2) ? 'none' : '';
+                dojo.query('.mdl_river_breakdown_panel, .mdl_score_hidden_vp').style('display', display);
+                this.updateLiveScores();
+            }
+        },
+
+        onLoadingComplete: function() {
+            this.updateLiveScores();
+        },
+
+        updateLiveScores: function() {
+            var prefEnabled = !this.prefs || !this.prefs[102] || this.prefs[102].value != 2;
+            var isSpectator = this.isSpectator;
+
+            var allPlayerIds = Object.keys(this.gamedatas.players);
+            if (this.isSoloMode && this.isSoloMode() && this.masterYoga) {
+                allPlayerIds.push(this.masterYoga.id.toString());
+            }
+
+            allPlayerIds.forEach((playerId) => {
+                var isMe = (!isSpectator && playerId == this.player_id);
+                var p = (playerId != this.masterYoga.id) ? this.gamedatas.players[playerId] : this.masterYoga;
+                var playerName = (p && p.name) ? p.name : (p && p.player_name ? p.player_name : 'Player');
+
+                var counts = isMe ? (this.cupCardsCounts[playerId] || {}) : (this.claimedCupCardsCounts[playerId] || {});
+                var totalCards = Object.values(counts).reduce((a, b) => a + b, 0);
+                var hiddenCount = this.hiddenCupCounts[playerId] !== undefined ? this.hiddenCupCounts[playerId] : 2;
+
+                // Update cup title: "<Player>'s cup (X cards)" or "<Player>'s cup (X cards + 2 hidden)"
+                var titleEl = $('mdl_p' + playerId + '_cup_title');
+                if (titleEl) {
+                    var cardStr = totalCards + ' ' + (totalCards === 1 ? _('card') : _('cards'));
+                    if (isMe || hiddenCount <= 0) {
+                        titleEl.textContent = playerName + "'s cup (" + cardStr + "):";
+                    } else {
+                        titleEl.textContent = playerName + "'s cup (" + cardStr + " + " + hiddenCount + " hidden):";
+                    }
+                }
+
+                // Calculate River-ordered breakdown (only colors gained in River, lowest at top to highest at bottom)
+                var score = 0;
+                var breakdown = [];
+                var usedColors = {};
+
+                for (var slot = 1; slot <= 6; slot++) {
+                    var col = this.riverSlots && this.riverSlots[playerId] ? this.riverSlots[playerId][slot] : null;
+                    if (col) {
+                        usedColors[col] = true;
+                        var count = counts[col] || 0;
+                        var pts = count * slot;
+                        score += pts;
+                        breakdown.push({
+                            slot: slot,
+                            color: col,
+                            count: count,
+                            multiplier: slot,
+                            pts: pts
+                        });
+                    }
+                }
+
+                // For ourselves (isMe), also collect cards in our cup not in river yet
+                var unplaced = [];
+                if (isMe) {
+                    var allColors = this.colors || ['red','orange','green','yellow','purple','black'];
+                    allColors.forEach((col) => {
+                        if (!usedColors[col]) {
+                            var count = counts[col] || 0;
+                            if (count > 0) {
+                                unplaced.push({
+                                    color: col,
+                                    count: count
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // Update standard BGA score counter in header
+                if (prefEnabled) {
+                    if (this.scoreCtrl && this.scoreCtrl[playerId]) {
+                        this.scoreCtrl[playerId].setValue(score);
+                    }
+                    if (this.bga && this.bga.playerPanels && this.bga.playerPanels.getScoreCounter(playerId)) {
+                        this.bga.playerPanels.getScoreCounter(playerId).setValue(score);
+                    }
+                    var scoreEl = $('player_score_' + playerId);
+                    if (scoreEl) {
+                        scoreEl.innerHTML = score;
+                    }
+                } else {
+                    var originalScore = (this.gamedatas && this.gamedatas.players && this.gamedatas.players[playerId]) ? this.gamedatas.players[playerId].score : 0;
+                    if (this.scoreCtrl && this.scoreCtrl[playerId]) {
+                        this.scoreCtrl[playerId].setValue(originalScore);
+                    }
+                    var scoreEl = $('player_score_' + playerId);
+                    if (scoreEl) {
+                        scoreEl.innerHTML = originalScore;
+                    }
+                }
+
+                // Update (+2 ❓) next to BGA score in player board
+                var vpScoreHidden = $('p' + playerId + '_score_hidden');
+                if (!vpScoreHidden) {
+                    var scoreEl = $('player_score_' + playerId);
+                    if (scoreEl) {
+                        dojo.place('<span id="p' + playerId + '_score_hidden" class="mdl_score_hidden_vp" style="display:none;">(+2 ❓)</span>', scoreEl, 'after');
+                        vpScoreHidden = $('p' + playerId + '_score_hidden');
+                    }
+                }
+                if (vpScoreHidden) {
+                    if (isMe || hiddenCount <= 0 || !prefEnabled) {
+                        vpScoreHidden.style.display = 'none';
+                    } else {
+                        vpScoreHidden.style.display = 'inline';
+                        vpScoreHidden.textContent = '(+' + hiddenCount + ' ❓)';
+                    }
+                }
+
+                // Render River breakdown in sidebar panel (single column, gained colors, plus unplaced cup cards for isMe)
+                var rbContainer = $('mdl_p' + playerId + '_river_breakdown');
+                if (rbContainer) {
+                    var rbHtml = '';
+                    breakdown.forEach((item) => {
+                        var isScoring = item.pts > 0;
+                        var rowClass = 'mdl_rb_row' + (isScoring ? ' mdl_rb_scoring' : '');
+                        var colorCap = item.color.charAt(0).toUpperCase() + item.color.slice(1);
+                        rbHtml += '<div class="' + rowClass + '" title="' + _(colorCap) + '">';
+                        rbHtml += '<div class="mdl_card shadow mdl_' + item.color + '_card mdl_rb_card"></div>';
+                        rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x River ' + item.slot + ' = <span class="mdl_rb_pts">' + item.pts + '</span></span>';
+                        rbHtml += '</div>';
+                    });
+
+                    // Render cards in cup not in river yet (for ourselves)
+                    unplaced.forEach((item) => {
+                        var colorCap = item.color.charAt(0).toUpperCase() + item.color.slice(1);
+                        rbHtml += '<div class="mdl_rb_row mdl_rb_unplaced" title="' + _(colorCap) + ' (' + _('not in river yet') + ')">';
+                        rbHtml += '<div class="mdl_card shadow mdl_' + item.color + '_card mdl_rb_card"></div>';
+                        rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x ' + _('not in river') + ' = <span class="mdl_rb_pts">0</span></span>';
+                        rbHtml += '</div>';
+                    });
+
+                    rbContainer.innerHTML = rbHtml;
+                    rbContainer.style.display = prefEnabled ? 'flex' : 'none';
+                }
+            });
         },
    });
 });

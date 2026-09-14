@@ -772,3 +772,90 @@
     max-height: calc(80vh - 80px);
     overflow: auto;
   }
+
+/* Live Score Tracker - River Breakdown & VP */
+.mdl_score_hidden_vp {
+    font-size: 12px;
+    font-weight: bold;
+    color: #e67e22;
+    margin-left: 4px;
+}
+
+.mdl_panel_cup_title {
+    font-weight: bold;
+    font-size: 13px;
+    color: #333;
+    padding: 3px 0 3px 0;
+    display: inline-block;
+}
+
+.mdl_river_breakdown_panel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 3px 0 6px 0;
+}
+
+.mdl_rb_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px 3px 4px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.04);
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.mdl_rb_row.mdl_rb_scoring {
+    background: rgba(212, 175, 55, 0.18);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.mdl_card.mdl_rb_card {
+    position: relative !important;
+    width: calc(40px * var(--mdlScale)) !important;
+    height: calc(40px * var(--mdlScale)) !important;
+    min-width: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    display: inline-block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+}
+
+.mdl_rb_formula {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.mdl_rb_scoring .mdl_rb_formula {
+    color: #111;
+    font-weight: 700;
+}
+
+.mdl_rb_pts {
+    font-size: 13px;
+    font-weight: 700;
+    color: #444;
+}
+
+.mdl_rb_scoring .mdl_rb_pts {
+    color: #b8860b;
+    font-weight: 800;
+}
+
+.mdl_rb_row.mdl_rb_unplaced {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(0, 0, 0, 0.18);
+}
+
+.mdl_rb_row.mdl_rb_unplaced .mdl_rb_formula {
+    color: #666;
+}
+
+.mdl_rb_row.mdl_rb_unplaced .mdl_rb_pts {
+    color: #888;
+}
