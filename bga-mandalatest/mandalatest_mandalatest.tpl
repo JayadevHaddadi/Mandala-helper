@@ -27,11 +27,13 @@
                 </div>
                 <div id="mdl_mandalas" class="mdl_mandalas">
                     <div id="mdl_mandala_1" class="mdl_mandala">
+                        <div id="mdl_mandala_1_missing" class="mdl_mandala_missing mdl_missing_left"></div>
                         <div id="mdl_field_1_{OPPONENT_ID}_wrapper" class="mdl_field"><div id="mdl_field_1_{OPPONENT_ID}"></div></div>
                         <div id="mdl_mountain_1_wrapper" class="mdl_mountain"><div id="mdl_mountain_1"><div id="mdl_mountain_1_stock" class="mdl_clickable_area"></div></div></div>
                         <div id="mdl_field_1_{PLAYER_ID}_wrapper" class="mdl_field mdl_player"><div id="mdl_field_1_{PLAYER_ID}"><div id="mdl_field_1_{PLAYER_ID}_stock" class="mdl_clickable_area"></div></div></div>
                     </div>
                     <div id="mdl_mandala_2" class="mdl_mandala">
+                        <div id="mdl_mandala_2_missing" class="mdl_mandala_missing mdl_missing_right"></div>
                         <div id="mdl_field_2_{OPPONENT_ID}_wrapper" class="mdl_field"><div id="mdl_field_2_{OPPONENT_ID}"></div></div>
                         <div id="mdl_mountain_2_wrapper" class="mdl_mountain"><div id="mdl_mountain_2"><div id="mdl_mountain_2_stock" class="mdl_clickable_area"></div></div></div>
                         <div id="mdl_field_2_{PLAYER_ID}_wrapper" class="mdl_field mdl_player"><div id="mdl_field_2_{PLAYER_ID}"><div id="mdl_field_2_{PLAYER_ID}_stock" class="mdl_clickable_area"></div></div></div>
