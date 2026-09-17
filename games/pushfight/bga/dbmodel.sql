@@ -1,7 +1,7 @@
 
 -- ------
 -- BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
--- Mandalatest implementation : © <Your name here> <Your email address here>
+-- pushfighttest implementation : © <Your name here> <Your email address here>
 -- 
 -- This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
 -- See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -16,17 +16,14 @@
 -- Note: The database schema is created from this file when the game starts. If you modify this file,
 --       you have to restart a game to see your changes in database.
 
--- Example 1: create a standard "card" table to be used with the "Deck" tools (see example game "hearts"):
+DROP TABLE IF EXISTS `piece`;
+CREATE TABLE IF NOT EXISTS `piece` (
+  `piece_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `player_id` INT NOT NULL,
+  `piece_type` VARCHAR(16) NOT NULL, -- 'king' (square pusher) or 'pawn' (round)
+  `pos_x` INT DEFAULT NULL,          -- 1 to 8 (NULL if fallen off board)
+  `pos_y` INT DEFAULT NULL,          -- 1 to 4 (NULL if fallen off board)
+  `is_alive` TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`piece_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- CREATE TABLE IF NOT EXISTS `card` (
---   `card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
---   `card_type` VARCHAR(16) NOT NULL,
---   `card_type_arg` INT NOT NULL,
---   `card_location` VARCHAR(16) NOT NULL,
---   `card_location_arg` INT NOT NULL,
---   PRIMARY KEY (`card_id`)
--- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1;
-
-
--- Example 2: add a custom field to the standard "player" table
--- ALTER TABLE `player` ADD `player_my_custom_field` INT UNSIGNED NOT NULL DEFAULT 0;

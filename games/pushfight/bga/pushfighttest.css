@@ -1,0 +1,336 @@
+/**
+ * Push Fight — Stylesheet
+ * Board Game Arena Implementation
+ */
+
+/* Container */
+.pft-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Board Wrapper with Rails */
+.pft-board-wrapper {
+    position: relative;
+    padding: 16px;
+    background: linear-gradient(135deg, #422a1d 0%, #2b170e 100%);
+    border-radius: 16px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.15);
+    border: 3px solid #5a3923;
+}
+
+/* Side Rails */
+.pft-rail {
+    position: absolute;
+    height: 14px;
+    background: linear-gradient(180deg, #824f2b 0%, #46250f 100%);
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    border: 1px solid #2e1709;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.pft-rail-label {
+    font-size: 8px;
+    font-weight: 800;
+    color: #e5b98f;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Top rail over Row 1, Cols 1..5: board has 8 cols (64px each + 4px gaps) */
+/* Cols 1..5 width = 5 * 64 + 4 * 4 = 336px */
+.pft-rail-top {
+    top: 4px;
+    left: 16px;
+    width: 336px;
+}
+
+/* Bottom rail under Row 4, Cols 4..8: Cols 4..8 starts at (3 * 68px) = 204px */
+.pft-rail-bottom {
+    bottom: 4px;
+    left: 220px;
+    width: 336px;
+}
+
+/* 26-Square Board Grid (4 rows x 8 cols) */
+.pft-board {
+    display: grid;
+    grid-template-columns: repeat(8, 64px);
+    grid-template-rows: repeat(4, 64px);
+    gap: 4px;
+    background: #d8b783;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+/* Center Dividing Line */
+.pft-board::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 2px);
+    width: 4px;
+    background: rgba(80, 45, 20, 0.5);
+    pointer-events: none;
+}
+
+/* Cells */
+.pft-cell {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #f5eedc 0%, #e6d3b3 100%);
+    border-radius: 6px;
+    box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.6), inset 0 -1px 3px rgba(0, 0, 0, 0.15);
+    border: 1px solid #c9a777;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+/* Cutout empty grid cells */
+.pft-cell.pft-cutout {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
+
+.pft-cell-coord {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 9px;
+    color: rgba(90, 60, 30, 0.35);
+    font-weight: 600;
+    pointer-events: none;
+}
+
+/* Valid Move Highlight Target */
+.pft-cell.pft-valid-move {
+    background: linear-gradient(135deg, #ffe082 0%, #ffd54f 100%) !important;
+    border: 2px dashed #f57f17 !important;
+    cursor: pointer;
+    animation: pft-pulse 1.2s infinite alternate;
+}
+
+.pft-cell.pft-valid-move::before {
+    content: '●';
+    font-size: 18px;
+    color: #f57f17;
+    opacity: 0.8;
+}
+
+@keyframes pft-pulse {
+    0% { transform: scale(0.97); box-shadow: 0 0 6px rgba(255, 179, 0, 0.6); }
+    100% { transform: scale(1.02); box-shadow: 0 0 14px rgba(255, 179, 0, 0.9); }
+}
+
+/* Pieces */
+.pft-piece {
+    width: 52px;
+    height: 52px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35), inset 0 2px 2px rgba(255, 255, 255, 0.4);
+    cursor: default;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    z-index: 2;
+}
+
+/* White / Light Ivory Team */
+.pft-piece.team-white {
+    background: linear-gradient(135deg, #ffffff 0%, #e2d7c5 100%);
+    border: 2px solid #b8a68d;
+    color: #4a3828;
+}
+
+/* Brown / Dark Walnut Team */
+.pft-piece.team-brown {
+    background: linear-gradient(135deg, #4e3019 0%, #29160a 100%);
+    border: 2px solid #201006;
+    color: #ebd3be;
+}
+
+/* Square Pushers (Kings) */
+.pft-piece.type-king {
+    border-radius: 8px;
+}
+
+/* Round Pawns */
+.pft-piece.type-pawn {
+    border-radius: 50%;
+}
+
+.pft-piece-icon {
+    font-size: 22px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Selectable Piece */
+.pft-piece.selectable {
+    cursor: pointer;
+    animation: pft-selectable-glow 1.5s infinite alternate;
+}
+
+.pft-piece.selectable:hover {
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes pft-selectable-glow {
+    0% { filter: drop-shadow(0 0 2px #ffc107); }
+    100% { filter: drop-shadow(0 0 8px #ff9800); }
+}
+
+/* Selected Piece */
+.pft-piece.selected {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px #ff9800, 0 8px 16px rgba(0, 0, 0, 0.5) !important;
+    z-index: 10;
+}
+
+/* Anchor Badge */
+.pft-anchor-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #ffd700 0%, #ff8f00 100%);
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    z-index: 6;
+}
+
+/* Push Directional Arrows */
+.pft-push-arrow {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    background: #e65100;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.pft-push-arrow:hover {
+    transform: scale(1.25);
+    background: #ff6d00;
+}
+
+.pft-arrow-up {
+    top: -32px;
+    left: calc(50% - 14px);
+}
+
+.pft-arrow-down {
+    bottom: -32px;
+    left: calc(50% - 14px);
+}
+
+.pft-arrow-left {
+    left: -32px;
+    top: calc(50% - 14px);
+}
+
+.pft-arrow-right {
+    right: -32px;
+    top: calc(50% - 14px);
+}
+
+/* Falling Off Edge Animation */
+.pft-piece.falling-off {
+    animation: pft-tumble 0.6s forwards;
+}
+
+@keyframes pft-tumble {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    100% { transform: scale(0.3) translateY(60px) rotate(180deg); opacity: 0; }
+}
+
+/* Info Bar */
+.pft-info-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pft-pill {
+    background: #f1f3f4;
+    color: #202124;
+    border-radius: 16px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    border: 1px solid #dadce0;
+}
+
+.pft-pill-phase {
+    background: #e8f0fe;
+    color: #1a73e8;
+    border-color: #aecbfa;
+}
+
+.pft-pill-anchor {
+    background: #fef7e0;
+    color: #b06000;
+    border-color: #fdd663;
+}
+
+/* Victory Banner */
+.pft-victory-banner {
+    width: 100%;
+    max-width: 600px;
+    margin: 10px auto;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #ffd700 0%, #ff8f00 100%);
+    color: #3e2723;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(255, 143, 0, 0.4);
+    animation: pft-banner-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pft-victory-banner h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+@keyframes pft-banner-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}

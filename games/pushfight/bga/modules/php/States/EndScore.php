@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Bga\Games\Mandalatest\States;
+namespace Bga\Games\pushfighttest\States;
 
 use Bga\GameFramework\StateType;
-use Bga\Games\Mandalatest\Game;
+use Bga\Games\pushfighttest\Game;
 
 const ST_END_GAME = 99;
 

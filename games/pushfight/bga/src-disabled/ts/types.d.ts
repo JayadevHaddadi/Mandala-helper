@@ -1,8 +1,8 @@
-interface MandalatestPlayer extends Player {
+interface pushfighttestPlayer extends Player {
     energy: number; // any information you add on each result['players']
 }
 
-interface MandalatestGamedatas extends Gamedatas<MandalatestPlayer> {
+interface pushfighttestGamedatas extends Gamedatas<pushfighttestPlayer> {
     // Add here variables you set up in getAllDatas
 }
    

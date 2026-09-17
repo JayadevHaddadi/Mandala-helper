@@ -1,61 +1,109 @@
-# Mandala Point Counter & Live BGA Assistant 🎴
+# Board Game Arena (BGA) Studio Multi-Game Workspace 🎲
 
-A tool and Chrome Extension to track scores, cards, and calculate live draw probabilities while playing **Mandala** on [BoardGameArena.com](https://boardgamearena.com).
-
----
-
-## Features
-
-✨ **Chrome Extension (Live HUD on BoardGameArena)**: Automatically reads the live game log as moves happen in real time without manual copy-pasting!  
-🎯 **18-Card Counter & Drawing Probabilities**: Tracks all 18 cards per color (108 total in deck), displaying remaining cards and real-time next-draw chances.  
-🕵️ **Opponent Mystery Card Odds**: Computes probability odds of what the opponent's 2 hidden starting cup cards contain.  
-📊 **Real-time Scoring & River Ordering**: Automatically arranges rivers in acquisition order (1 → 6 value) and calculates exact scores.  
-🧾 **Stand-alone Web App & Log Parser**: Use standalone in `index.html` or paste game logs anytime.  
-💾 **Auto-save**: Preserves your state across browser sessions.  
+A structured, modular multi-game repository for developing, testing, and deploying games to [Board Game Arena (BGA) Studio](https://studio.boardgamearena.com).
 
 ---
 
-## 🚀 How to Install the Chrome Extension
+## 📁 Repository Structure
 
-1. Open Google Chrome and navigate to:
-   ```
-   chrome://extensions
-   ```
-2. Enable **Developer mode** using the toggle switch in the top-right corner.
-3. Click the **Load unpacked** button in the top-left.
-4. Select the `Mandala-helper` folder:
-   ```
-   /home/jayadevhaddadi/GitHub/Mandala-helper
-   ```
-5. Open or refresh any active Mandala table on [BoardGameArena.com](https://boardgamearena.com).
-6. The **Mandala Helper HUD** will appear on the right side of your screen with live scoring, rivers, and card probabilities!
-
----
-
-## 🎴 Standalone Web App
-
-You can also run the standalone web application directly:
-
-```bash
-# Open index.html in your browser
-xdg-open index.html
+```
+Mandala-helper/
+│
+├── README.md                           # Master workspace overview (this file)
+├── BGA_DEVELOPER_CHEAT_SHEET.md        # Central developer reference & gotchas
+├── bga_credentials.md                  # Developer account reference & setup
+│
+├── tools/                              # Common development tools & scripts
+│   ├── sync.py                         # Universal SFTP delta-sync tool for ANY game
+│   └── sftp.config.json                # Shared SFTP credentials (git-ignored)
+│
+└── games/                              # All game projects grouped by title
+    │
+    ├── pushfight/                      # [Push Fight] (Modern PHP 8 OOP Template)
+    │   ├── bga/                        # BGA Studio codebase (pushfighttest)
+    │   │   ├── modules/php/            # Game.php, State Machine classes
+    │   │   ├── modules/js/             # Game.js (Client engine & Web Audio)
+    │   │   ├── metadata_assets/        # Release-ready Box, Banner, Title, Display art
+    │   │   ├── stats.jsonc             # Game statistics
+    │   │   └── gameinfos.jsonc         # Metadata & configuration
+    │   └── prototype/                  # Standalone web prototype & official rules PDFs
+    │
+    ├── mandala/                        # [Mandala] (Legacy Dojo Template)
+    │   ├── bga-prod/                   # Production BGA codebase (mandala)
+    │   ├── bga-test/                   # Studio test sandbox (mandalatest)
+    │   └── chrome-extension/           # Mandala Point Counter & HUD Chrome Extension
+    │
+    └── lordsofscotland/                # [Lords of Scotland] (Upcoming Game)
+        └── bga/                        # Studio sandbox codebase
 ```
 
-- **Parse Log**: Click **Parse Log**, paste the BGA match log, and click **Process Log**.
-- **Card Tracker**: View the live card counts (out of 18) and draw probabilities on the right panel.
+---
+
+## 🚀 Universal BGA Sync Tool (`tools/sync.py`)
+
+A single, fast delta-sync script replaces all individual sync scripts. It compares local and remote file modification times and sizes, uploading only modified files over SFTP in seconds.
+
+### Quick Usage
+
+```bash
+# Push Fight (syncs games/pushfight/bga -> remote pushfighttest)
+python tools/sync.py pushfighttest
+
+# Mandala Test Sandbox (syncs games/mandala/bga-test -> remote mandalatest)
+python tools/sync.py mandalatest
+
+# Mandala Production (syncs games/mandala/bga-prod -> remote mandala)
+python tools/sync.py mandala
+
+# Lords of Scotland (syncs games/lordsofscotland/bga -> remote lordsofscotlandtest)
+python tools/sync.py lordsofscotlandtest
+
+# Preview changes without uploading (Dry Run)
+python tools/sync.py pushfighttest --dry-run
+```
+
+### Credentials Configuration
+Place your SFTP login details in `tools/sftp.config.json` (already configured and git-ignored):
+```json
+{
+    "host": "1.studio.boardgamearena.com",
+    "port": 2022,
+    "username": "YourUsername",
+    "password": "YourPassword"
+}
+```
 
 ---
 
-## 📐 Scoring Rules & Math
+## 🎮 Active Games
 
-- **River Scoring**: $1\text{st color} \times 1\text{ pt}, 2\text{nd color} \times 2\text{ pts}, \dots, 6\text{th color} \times 6\text{ pts}$.
-- **Deck Accounting**: 6 colors × 18 cards each = 108 cards.
-- **Next Draw Probability**:
-  $$P(\text{Draw } C) = \frac{\text{Remaining Cards of Color } C}{\text{Total Unseen Cards in Deck \& Hands}} \times 100\%$$
-- **Opponent Hidden Cards Estimation**: Calculates marginal odds of opponent holding at least 1 card of each color in their 2 secret cup cards based on remaining unseen cards.
+### 1. Push Fight (`games/pushfight/`)
+* **Framework**: Modern BGA OOP Template (PHP 8, ES6 modular JavaScript, pure CSS).
+* **Features**:
+  * 26-square board geometry with 3D raised rails and coordinate grid.
+  * BFS flood-fill sliding movement (0–2 moves).
+  * Mandatory King push chain resolution with side rail collision and off-board victory detection.
+  * Metallic anchor locking token.
+  * Built-in Web Audio API sound synthesis (tactile slides, bass push thud, anchor chime, victory fanfare).
+  * Full table and player statistics tracking.
+* **Metadata & Art**: Complete set of 2000×2000 title image, 1386×400 banner, 280×280 box, 50×50 icon, and 900×600 display photos in `metadata_assets/`.
+
+### 2. Mandala (`games/mandala/`)
+* **Framework**: Legacy Dojo / PHP template.
+* **Components**:
+  * `bga-prod/`: Production release code.
+  * `bga-test/`: Studio testing sandbox.
+  * `chrome-extension/`: Standalone browser extension providing a live HUD, 18-card counting probabilities, opponent mystery card odds, and real-time river scoring.
+
+### 3. Lords of Scotland (`games/lordsofscotland/`)
+* **Framework**: Modern BGA OOP Template workspace ready for new development.
+
+---
+
+## 📖 Developer Documentation
+* **[BGA_DEVELOPER_CHEAT_SHEET.md](file:///d:/GitHub/Mandala-helper/BGA_DEVELOPER_CHEAT_SHEET.md)**: Architectural gotchas, `PlayerStats` parameter order, zombie reflection rules, schema persistence, and the Game Metadata Manager guide.
 
 ---
 
 ## License
-
 MIT License.

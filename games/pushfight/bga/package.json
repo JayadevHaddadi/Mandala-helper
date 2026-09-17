@@ -1,13 +1,13 @@
  {
-   "name": "mandalatest",
+   "name": "pushfighttest",
    "version": "1.0.0",
    "description": "",
    "main": "modules/js/Game.js",
    "scripts": {
      "build:ts": "rollup -c",
-     "build:scss": "sass --no-source-map src/scss/Game.scss mandalatest.css",
+     "build:scss": "sass --no-source-map src/scss/Game.scss pushfighttest.css",
      "watch:ts": "rollup -c -w",
-     "watch:scss": "sass --watch src/scss/Game.scss mandalatest.css",
+     "watch:scss": "sass --watch src/scss/Game.scss pushfighttest.css",
      "watch": "npm run watch:ts & npm run watch:scss",
      "build": "npm run build:ts && npm run build:scss"
    },

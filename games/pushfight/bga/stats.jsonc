@@ -1,0 +1,34 @@
+{    
+    // Statistics for the table
+    "table": {
+        "turns_number": {
+            "id": 10,
+            "name": "Number of turns",
+            "type": "int"
+        },
+        "pushes_number": {
+            "id": 11,
+            "name": "Total pushes",
+            "type": "int"
+        }
+    },
+    
+    // Statistics for each player
+    "player": {
+        "moves_number": {
+            "id": 20,
+            "name": "Pieces moved",
+            "type": "int"
+        },
+        "pushes_number": {
+            "id": 21,
+            "name": "Pushes executed",
+            "type": "int"
+        },
+        "knocked_off_pieces": {
+            "id": 22,
+            "name": "Opponent pieces pushed off",
+            "type": "int"
+        }
+    }
+}

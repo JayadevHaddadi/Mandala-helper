@@ -20,5 +20,14 @@ temp/
 
 # BGA Studio Credentials
 **/sftp.json
+**/sftp.config.json
 bga_credentials.md
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary development artifacts
+.tempmediaStorage/
+scratch/

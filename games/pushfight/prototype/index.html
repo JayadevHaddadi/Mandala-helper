@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Push Fight — Interactive Web Prototype</title>
+  <meta name="description" content="Playable interactive browser prototype of the board game Push Fight with authentic 26-square grid, orthogonal sliding moves, and chain-reaction push engine.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="game-header">
+      <div class="brand">
+        <div class="logo-badge">PF</div>
+        <div class="title-group">
+          <h1>PUSH FIGHT</h1>
+          <span class="subtitle">Official 26-Square Tactical Prototype</span>
+        </div>
+      </div>
+
+      <div class="turn-tracker" id="turnTracker">
+        <div class="player-badge white-badge active" id="badgeWhite">
+          <div class="piece-icon white-king-icon"></div>
+          <div class="badge-info">
+            <span class="player-label">Player 1</span>
+            <span class="player-name">White Team</span>
+          </div>
+        </div>
+        <div class="vs-divider">VS</div>
+        <div class="player-badge brown-badge" id="badgeBrown">
+          <div class="piece-icon brown-king-icon"></div>
+          <div class="badge-info">
+            <span class="player-label">Player 2</span>
+            <span class="player-name">Brown Team</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" id="btnToggle3D" title="Toggle 3D View">
+          <span class="btn-icon">🎲</span> 3D View
+        </button>
+        <button class="btn btn-secondary" id="btnHelp" title="Rules & Guide">
+          <span class="btn-icon">?</span> Rules
+        </button>
+        <button class="btn btn-secondary" id="btnRestart" title="New Game">
+          <span class="btn-icon">↺</span> Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="main-content">
+      <!-- Status & Phase Banner -->
+      <section class="phase-banner" id="phaseBanner">
+        <div class="phase-status">
+          <span class="phase-pill" id="phasePill">Move Phase</span>
+          <span class="phase-instruction" id="phaseInstruction">White may make up to 2 sliding moves, or proceed to push.</span>
+        </div>
+        <div class="moves-counter" id="movesCounterContainer">
+          <span class="moves-label">Moves Left:</span>
+          <div class="move-dots" id="moveDots">
+            <span class="dot active" id="dot1"></span>
+            <span class="dot active" id="dot2"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Board Wrapper -->
+      <div class="board-stage">
+        <div class="board-container" id="boardContainer">
+          <!-- Side Rails Overlay Elements -->
+          <div class="rail rail-top" id="railTop" title="Top Side Rail: Pieces cannot pass or fall off here">
+            <span class="rail-label">▲ SIDE RAIL (NO PUSH-OFF) ▲</span>
+          </div>
+          <div class="rail rail-bottom" id="railBottom" title="Bottom Side Rail: Pieces cannot pass or fall off here">
+            <span class="rail-label">▼ SIDE RAIL (NO PUSH-OFF) ▼</span>
+          </div>
+
+          <!-- Open Danger Zone Indicators -->
+          <div class="danger-zone danger-left" title="Open Push-off Edge: Pieces pushed here fall off!">
+            <span>⚠ DANGER ⚠</span>
+          </div>
+          <div class="danger-zone danger-right" title="Open Push-off Edge: Pieces pushed here fall off!">
+            <span>⚠ DANGER ⚠</span>
+          </div>
+
+          <!-- Center Division Line -->
+          <div class="center-divider" id="centerDivider">
+            <div class="divider-line"></div>
+            <div class="divider-tag">CENTER LINE</div>
+          </div>
+
+          <!-- The 26-Square Grid -->
+          <div class="grid-board" id="gridBoard">
+            <!-- 32 cells (4 rows x 8 cols) generated via JS, 6 inactive cutout cells -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls and Info Bar -->
+      <div class="action-controls">
+        <div class="control-group">
+          <button class="btn btn-accent" id="btnSkipMoves">
+            Proceed to Mandatory Push &rarr;
+          </button>
+          <button class="btn btn-outline" id="btnUndoMove" disabled>
+            Undo Move
+          </button>
+          <button class="btn btn-outline" id="btnQuickSetup">
+            Standard Setup
+          </button>
+        </div>
+
+        <div class="anchor-status" id="anchorStatus">
+          <div class="anchor-icon-small">⚓</div>
+          <span class="anchor-text" id="anchorText">Anchor: None (First turn)</span>
+        </div>
+      </div>
+
+      <!-- Game Log / History Drawer -->
+      <section class="log-section">
+        <div class="log-header">
+          <h3>Action Log</h3>
+          <span class="log-badge" id="logTurnCount">Turn 1</span>
+        </div>
+        <div class="log-messages" id="logMessages">
+          <div class="log-entry system-msg">Game started. Setup your pieces or click 'Standard Setup' to begin!</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal: Rules & Mechanics Cheat Sheet -->
+    <div class="modal-overlay" id="rulesModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Push Fight &mdash; Official Rules</h2>
+          <button class="btn-close" id="btnCloseRules">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="rule-card">
+            <h4>Goal</h4>
+            <p>Be the first to push <strong>one of your opponent's pieces</strong> off the edge of the board at either open end!</p>
+          </div>
+
+          <div class="rule-card">
+            <h4>Components (Each Player)</h4>
+            <ul>
+              <li><strong>3 Square Pieces (Kings):</strong> Can slide orthogonally. The <em>only</em> pieces with the power to push!</li>
+              <li><strong>2 Round Pieces (Pawns):</strong> Can slide and be pushed, but <em>cannot</em> push.</li>
+              <li><strong>1 Shared Red Anchor:</strong> Placed on the King that just pushed. Protects that King from being pushed on the opponent's next turn.</li>
+            </ul>
+          </div>
+
+          <div class="rule-card">
+            <h4>Turn Sequence</h4>
+            <ol>
+              <li><strong>1. Move Phase (Optional):</strong> Make up to <strong>2 sliding moves</strong>. Slide any friendly piece any distance orthogonally through empty spaces (Rook movement). You can move 1 piece twice, 2 pieces once, or skip.</li>
+              <li><strong>2. Push Phase (Mandatory):</strong> You <strong>must</strong> use one of your Square Kings to push an adjacent piece. A push shifts a contiguous line of pieces 1 square.</li>
+            </ol>
+          </div>
+
+          <div class="rule-card">
+            <h4>Push Restrictions</h4>
+            <ul>
+              <li>Cannot push into or across a <strong>Side Rail</strong> (the raised wooden barriers).</li>
+              <li>Cannot push any line containing the <strong>Anchored King</strong>.</li>
+              <li>Pushing off an <strong>Open Edge</strong> immediately pushes that piece off the board!</li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-accent" id="btnGotIt">Got It!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Victory Overlay -->
+    <div class="victory-overlay" id="victoryOverlay">
+      <div class="victory-card">
+        <div class="trophy-icon">🏆</div>
+        <h2 id="victoryTitle">White Team Wins!</h2>
+        <p id="victoryReason">Brown piece was pushed off the board!</p>
+        <button class="btn btn-accent btn-large" id="btnPlayAgain">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
