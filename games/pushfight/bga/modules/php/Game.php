@@ -43,8 +43,30 @@ class Game extends \Bga\GameFramework\Table
         return min(95, $turn * 5);
     }
 
+    public function ensureSchema(): void
+    {
+        try {
+            $cols = static::getObjectListFromDb("SHOW COLUMNS FROM `piece` LIKE 'piece_type'");
+            if (empty($cols)) {
+                static::DbQuery("DROP TABLE IF EXISTS `piece`");
+                static::DbQuery("CREATE TABLE IF NOT EXISTS `piece` (
+                  `piece_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                  `player_id` INT NOT NULL,
+                  `piece_type` VARCHAR(16) NOT NULL,
+                  `pos_x` INT DEFAULT NULL,
+                  `pos_y` INT DEFAULT NULL,
+                  `is_alive` TINYINT(1) NOT NULL DEFAULT 1,
+                  PRIMARY KEY (`piece_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
+        } catch (\Exception $e) {
+            // Ignore
+        }
+    }
+
     public function upgradeTableDb($from_version): void
     {
+        $this->ensureSchema();
     }
 
     /**
@@ -387,6 +409,7 @@ class Game extends \Bga\GameFramework\Table
 
         $this->reloadPlayersBasicInfos();
 
+        $this->ensureSchema();
         static::DbQuery("DELETE FROM `piece`");
 
         // Standard Push Fight initial layout:
