@@ -9,13 +9,13 @@
     "game_name": "Push Fight",
 
     // Game publisher (use empty string if there is no publisher)
-    "publisher": "Push Fight LLC",
+    "publisher": "Brettco Inc.",
 
     // Url of game publisher website
     "publisher_website": "http://pushfightgame.com/",
 
     // Board Game Geek ID of the publisher
-    "publisher_bgg_id": 14065,
+    "publisher_bgg_id": 16941,
 
     // Board game geek ID of the game
     "bgg_id": 54221,
