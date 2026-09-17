@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Bga\Games\pushfighttest\States;
+namespace Bga\Games\pushfight\States;
 
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\GameFramework\UserException;
-use Bga\Games\pushfighttest\Game;
+use Bga\Games\pushfight\Game;
 
 class PlayerTurn extends GameState
 {
@@ -58,6 +58,9 @@ class PlayerTurn extends GameState
             }
         }
 
+        $movesMade = (int) $this->globals->get('moves_made_this_turn', 0);
+        $canUndo = ($movesMade > 0 || $phase === 'push');
+
         return [
             'phase' => $phase,
             'moves_remaining' => $movesRemaining,
@@ -65,6 +68,7 @@ class PlayerTurn extends GameState
             'valid_moves' => $validMoves,
             'valid_pushes' => $validPushes,
             'can_skip_move' => ($phase === 'move'),
+            'can_undo' => $canUndo,
         ];
     }
 
@@ -115,6 +119,9 @@ class PlayerTurn extends GameState
 
         $movesRemaining--;
         $this->globals->set('moves_remaining', $movesRemaining);
+
+        $movesMade = (int) $this->globals->get('moves_made_this_turn', 0) + 1;
+        $this->globals->set('moves_made_this_turn', $movesMade);
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
         $pieceTypeName = ($piece['piece_type'] === 'king') ? clienttranslate('King') : clienttranslate('Pawn');
@@ -172,6 +179,62 @@ class PlayerTurn extends GameState
         if (!$this->game->playerHasAnyLegalPush($activePlayerId)) {
             return $this->handleTrappedPlayer($activePlayerId);
         }
+
+        return PlayerTurn::class;
+    }
+
+    /**
+     * Action: Undo moves made during the current turn, resetting the board to turn start.
+     */
+    #[PossibleAction]
+    public function actUndo(int $activePlayerId, array $args)
+    {
+        $phase = (string) $this->globals->get('turn_phase', 'move');
+        $movesMade = (int) $this->globals->get('moves_made_this_turn', 0);
+
+        if ($movesMade === 0 && $phase === 'move') {
+            throw new UserException(clienttranslate('No actions have been taken this turn to undo.'));
+        }
+
+        $rawSnapshot = (string) $this->globals->get('turn_start_positions', '');
+        if (empty($rawSnapshot)) {
+            throw new UserException(clienttranslate('No turn snapshot available to undo.'));
+        }
+
+        $snapshot = json_decode($rawSnapshot, true);
+        if (!is_array($snapshot)) {
+            throw new UserException(clienttranslate('Corrupted turn snapshot.'));
+        }
+
+        // Restore each piece to its position at the start of this turn
+        foreach ($snapshot as $pieceId => $pos) {
+            $pId = (int) $pieceId;
+            $x = $pos['x'] !== null ? (int) $pos['x'] : "NULL";
+            $y = $pos['y'] !== null ? (int) $pos['y'] : "NULL";
+            $alive = (int) $pos['is_alive'];
+            Game::DbQuery("UPDATE `piece` SET `pos_x` = $x, `pos_y` = $y, `is_alive` = $alive WHERE `piece_id` = $pId");
+        }
+
+        // Revert stats increment for moves made this turn
+        if ($movesMade > 0) {
+            $this->playerStats->inc('moves_number', -$movesMade, $activePlayerId);
+        }
+
+        // Reset turn state back to beginning of turn
+        $this->globals->set('moves_remaining', 2);
+        $this->globals->set('turn_phase', 'move');
+        $this->globals->set('moves_made_this_turn', 0);
+
+        $playerName = $this->game->getPlayerNameById($activePlayerId);
+        $restoredPieces = $this->game->getAllPieces();
+
+        $this->notify->all('turnUndone', clienttranslate('${player_name} undid moves and restarted turn'), [
+            'player_id' => $activePlayerId,
+            'player_name' => $playerName,
+            'pieces' => $restoredPieces,
+            'moves_remaining' => 2,
+            'turn_phase' => 'move',
+        ]);
 
         return PlayerTurn::class;
     }

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push Fight — Sound Effects Studio & Tester</title>
+    <style>
+        :root {
+            --bg-deep: #12151c;
+            --card-bg: rgba(26, 31, 44, 0.85);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f0f4fc;
+            --text-muted: #8e9bb0;
+            --accent-gold: #e2b467;
+            --accent-wood: #b87c4c;
+            --accent-red: #d94b4b;
+            --accent-blue: #3a86ff;
+            --accent-green: #2ec4b6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #1e2433 0%, #0d1017 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 880px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(226, 180, 103, 0.15);
+            color: var(--accent-gold);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            margin-bottom: 0.8rem;
+            border: 1px solid rgba(226, 180, 103, 0.3);
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ffffff 40%, #e2b467 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .info-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-size: 0.92rem;
+            color: #c0cde0;
+            backdrop-filter: blur(12px);
+        }
+
+        .info-card strong {
+            color: var(--accent-gold);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .sound-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(12px);
+        }
+
+        .sound-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(226, 180, 103, 0.4);
+            box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .icon-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .card-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-meta {
+            font-size: 0.75rem;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            color: #a0aec0;
+        }
+
+        button.btn-play {
+            width: 100%;
+            padding: 0.85rem 1.2rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.15s ease;
+            background: linear-gradient(135deg, #e2b467 0%, #b87c4c 100%);
+            color: #12151c;
+            box-shadow: 0 4px 12px rgba(226, 180, 103, 0.25);
+        }
+
+        button.btn-play:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+            box-shadow: 0 6px 16px rgba(226, 180, 103, 0.35);
+        }
+
+        button.btn-play:active {
+            transform: scale(0.98);
+        }
+
+        .btn-combo {
+            background: linear-gradient(135deg, #3a86ff 0%, #2ec4b6 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(58, 134, 255, 0.3);
+        }
+
+        .btn-combo:hover {
+            box-shadow: 0 6px 16px rgba(58, 134, 255, 0.4);
+        }
+
+        .btn-win {
+            background: linear-gradient(135deg, #ffd166 0%, #ff5964 100%);
+            color: #12151c;
+            box-shadow: 0 4px 12px rgba(255, 89, 100, 0.3);
+        }
+
+        /* Waveform visualizer line */
+        .vis-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .vis-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-gold);
+            transition: width 0.05s linear;
+        }
+
+        .full-card {
+            grid-column: 1 / -1;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(12px);
+        }
+
+        .full-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--accent-gold);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .control-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-group input[type="range"] {
+            accent-color: var(--accent-gold);
+            cursor: pointer;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: auto;
+            padding-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge">Board Game Arena Audio Studio</div>
+            <h1>Push Fight Sound Studio</h1>
+            <p class="subtitle">Audition and fine-tune the procedural Web Audio effects used in the game client.</p>
+        </header>
+
+        <div class="info-card">
+            <strong>Where are the sounds in the repo?</strong><br>
+            They are located in <code style="color:#e2b467">games/pushfight/bga/modules/js/Game.js</code> (lines 6–90) inside the <code style="color:#e2b467">SoundController</code> class. Rather than loading external <code style="color:#e2b467">.mp3</code> files over the network, they are synthesized mathematically in real-time using the browser's <strong>Web Audio API</strong> (<code style="color:#e2b467">AudioContext</code> oscillators). This guarantees zero loading lag, instant response, and zero network bandwidth!
+        </div>
+
+        <div class="grid">
+            <!-- 1. Slide Sound -->
+            <div class="sound-card">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-circle" style="color:#e2b467">♟</div>
+                        <div class="card-title">1. Piece Slide</div>
+                    </div>
+                    <div class="card-desc">Triggered when any piece slides smoothly across empty board squares during the Move Phase.</div>
+                    <div class="card-meta">Type: Sine | 220Hz &rarr; 140Hz | 120ms</div>
+                    <div class="vis-bar"><div id="fill-slide" class="vis-fill"></div></div>
+                </div>
+                <button class="btn-play" onclick="playSlide()">
+                    <span>▶</span> Play Slide Sound
+                </button>
+            </div>
+
+            <!-- 2. Push Thud -->
+            <div class="sound-card">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-circle" style="color:#b87c4c">💥</div>
+                        <div class="card-title">2. Push Impact Thud</div>
+                    </div>
+                    <div class="card-desc">Triggered on the mandatory King push. Low, physical wood-on-wood impact vibration.</div>
+                    <div class="card-meta">Type: Triangle | 160Hz &rarr; 45Hz | 180ms</div>
+                    <div class="vis-bar"><div id="fill-thud" class="vis-fill"></div></div>
+                </div>
+                <button class="btn-play" onclick="playThud()">
+                    <span>▶</span> Play Push Thud
+                </button>
+            </div>
+
+            <!-- 3. Anchor Chime -->
+            <div class="sound-card">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-circle" style="color:#3a86ff">⚓</div>
+                        <div class="card-title">3. Anchor Bell</div>
+                    </div>
+                    <div class="card-desc">Clear, resonant metallic chime when the red Anchor lock is placed on the pushing King.</div>
+                    <div class="card-meta">Type: Sine | 587.33Hz (D5) | 350ms</div>
+                    <div class="vis-bar"><div id="fill-anchor" class="vis-fill"></div></div>
+                </div>
+                <button class="btn-play" onclick="playAnchor()">
+                    <span>▶</span> Play Anchor Bell
+                </button>
+            </div>
+
+            <!-- 4. Push + Anchor Combo -->
+            <div class="sound-card">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-circle" style="color:#2ec4b6">⚡</div>
+                        <div class="card-title">4. Real Push Sequence</div>
+                    </div>
+                    <div class="card-desc">Simulates the exact game sequence: the heavy push thud immediately followed by anchor lock.</div>
+                    <div class="card-meta">Combo: Thud + 220ms + Anchor Bell</div>
+                    <div class="vis-bar"><div id="fill-combo" class="vis-fill"></div></div>
+                </div>
+                <button class="btn-play btn-combo" onclick="playPushSequence()">
+                    <span>▶</span> Play Full Push Combo
+                </button>
+            </div>
+
+            <!-- 5. Victory Fanfare -->
+            <div class="sound-card" style="grid-column: 1 / -1;">
+                <div>
+                    <div class="card-header">
+                        <div class="icon-circle" style="color:#ffd166">🏆</div>
+                        <div class="card-title">5. Victory Fanfare</div>
+                    </div>
+                    <div class="card-desc">Triumphant rising 4-note C-major arpeggio played when a player pushes an opponent piece off the board and wins.</div>
+                    <div class="card-meta">Notes: C4 (261Hz) &bull; E4 (330Hz) &bull; G4 (392Hz) &bull; C5 (523Hz) | 480ms</div>
+                    <div class="vis-bar"><div id="fill-win" class="vis-fill"></div></div>
+                </div>
+                <button class="btn-play btn-win" onclick="playWin()">
+                    <span>▶</span> Play Victory Fanfare
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Preset Experiments -->
+        <div class="full-card">
+            <h2>Audition Alternative Sound Presets</h2>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">
+                Click any preset below to hear alternative design aesthetics for the pieces:
+            </p>
+            <div class="controls-grid">
+                <button class="btn-play" style="background:#242c3d; color:#fff; border:1px solid #3d4a66;" onclick="playPresetClack()">
+                    🥢 Preset A: Crisp Wood Clack
+                </button>
+                <button class="btn-play" style="background:#242c3d; color:#fff; border:1px solid #3d4a66;" onclick="playPresetHeavyKnock()">
+                    🪵 Preset B: Deep Heavy Knock
+                </button>
+                <button class="btn-play" style="background:#242c3d; color:#fff; border:1px solid #3d4a66;" onclick="playPresetGlassPing()">
+                    🔔 Preset C: Crystal Anchor Ping
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            Push Fight &copy; Brett J. Gilbert &bull; Push Fight LLC &bull; Board Game Arena Implementation
+        </footer>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        function getCtx() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function triggerVis(id, durationMs) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.width = '100%';
+            setTimeout(() => { el.style.width = '0%'; }, durationMs);
+        }
+
+        // Exact Game.js Sounds:
+        function playSlide() {
+            const ctx = getCtx();
+            triggerVis('fill-slide', 120);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(220, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.18, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.12);
+        }
+
+        function playThud() {
+            const ctx = getCtx();
+            triggerVis('fill-thud', 180);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(160, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.18);
+            gain.gain.setValueAtTime(0.35, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.18);
+        }
+
+        function playAnchor() {
+            const ctx = getCtx();
+            triggerVis('fill-anchor', 350);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.35);
+        }
+
+        function playPushSequence() {
+            triggerVis('fill-combo', 450);
+            playThud();
+            setTimeout(playAnchor, 220);
+        }
+
+        function playWin() {
+            const ctx = getCtx();
+            triggerVis('fill-win', 480);
+            const notes = [261.63, 329.63, 392.00, 523.25]; // C-E-G-C
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.25, ctx.currentTime + idx * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.12 + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + idx * 0.12);
+                osc.stop(ctx.currentTime + idx * 0.12 + 0.35);
+            });
+        }
+
+        // Alternative presets
+        function playPresetClack() {
+            const ctx = getCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.05);
+        }
+
+        function playPresetHeavyKnock() {
+            const ctx = getCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(180, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.22);
+            gain.gain.setValueAtTime(0.4, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.22);
+        }
+
+        function playPresetGlassPing() {
+            const ctx = getCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+            gain.gain.setValueAtTime(0.25, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        }
+    </script>
+</body>
+</html>

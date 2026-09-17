@@ -116,6 +116,12 @@ class PlayerTurn {
             } else {
                 this.bga.statusBar.setTitle(_('${you} must execute a mandatory push with a square King!'));
             }
+
+            if (args.can_undo) {
+                this.bga.statusBar.addActionButton(_('↺ Undo Moves / Restart Turn'), () => {
+                    this.bga.actions.performAction('actUndo');
+                }, { color: 'warning' });
+            }
         } else {
             if (phase === 'move') {
                 this.bga.statusBar.setTitle(_('${actplayer} is planning their moves...'));
@@ -483,6 +489,22 @@ export class Game {
         const phasePill = document.getElementById('pft_phase_pill');
         if (phasePill) phasePill.textContent = `Phase: ${args.turn_phase.toUpperCase()}`;
 
+        this.clearHighlights();
+        this.selectedPieceId = null;
+    }
+
+    async notif_turnUndone(args) {
+        sounds.playSlide();
+        this.gamedatas.turn_phase = args.turn_phase;
+        this.gamedatas.pieces = args.pieces;
+
+        const phasePill = document.getElementById('pft_phase_pill');
+        if (phasePill) {
+            phasePill.textContent = `Phase: ${args.turn_phase.toUpperCase()}`;
+        }
+
+        // Re-render pieces into restored positions
+        this.renderPieces();
         this.clearHighlights();
         this.selectedPieceId = null;
     }

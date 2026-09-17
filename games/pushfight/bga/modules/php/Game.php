@@ -14,9 +14,9 @@
  */
 declare(strict_types=1);
 
-namespace Bga\Games\pushfighttest;
+namespace Bga\Games\pushfight;
 
-use Bga\Games\pushfighttest\States\PlayerTurn;
+use Bga\Games\pushfight\States\PlayerTurn;
 use Bga\GameFramework\UserException;
 
 class Game extends \Bga\GameFramework\Table
@@ -93,6 +93,23 @@ class Game extends \Bga\GameFramework\Table
         return $this->getObjectListFromDb(
             "SELECT `piece_id` AS `id`, `player_id`, `piece_type`, `pos_x`, `pos_y`, `is_alive` FROM `piece`"
         );
+    }
+
+    /**
+     * Snapshot map of all piece positions for turn undo.
+     */
+    public function getPiecePositionsMap(): array
+    {
+        $pieces = $this->getAllPieces();
+        $map = [];
+        foreach ($pieces as $p) {
+            $map[(int) $p['id']] = [
+                'x' => $p['pos_x'] !== null ? (int) $p['pos_x'] : null,
+                'y' => $p['pos_y'] !== null ? (int) $p['pos_y'] : null,
+                'is_alive' => (int) $p['is_alive'],
+            ];
+        }
+        return $map;
     }
 
     /**
@@ -412,6 +429,8 @@ class Game extends \Bga\GameFramework\Table
         $this->globals->set('moves_remaining', 2);
         $this->globals->set('turn_phase', 'move');
         $this->globals->set('turn_count', 1);
+        $this->globals->set('moves_made_this_turn', 0);
+        $this->globals->set('turn_start_positions', json_encode($this->getPiecePositionsMap()));
 
         // Initialize game statistics
         $this->tableStats->init(['turns_number', 'pushes_number'], 0);

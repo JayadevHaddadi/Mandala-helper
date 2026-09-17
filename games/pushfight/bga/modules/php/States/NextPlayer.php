@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Bga\Games\pushfighttest\States;
+namespace Bga\Games\pushfight\States;
 
 use Bga\GameFramework\StateType;
-use Bga\Games\pushfighttest\Game;
+use Bga\Games\pushfight\Game;
 
 class NextPlayer extends \Bga\GameFramework\States\GameState
 {
@@ -31,6 +31,8 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
         // Reset turn state
         $this->globals->set('moves_remaining', 2);
         $this->globals->set('turn_phase', 'move');
+        $this->globals->set('moves_made_this_turn', 0);
+        $this->globals->set('turn_start_positions', json_encode($this->game->getPiecePositionsMap()));
 
         $turnCount = (int) $this->globals->get('turn_count', 1) + 1;
         $this->globals->set('turn_count', $turnCount);

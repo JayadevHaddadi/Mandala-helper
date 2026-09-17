@@ -24,7 +24,7 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # Known game targets mapping: target_alias -> (local_subpath, remote_folder)
 TARGET_MAP = {
-    "pushfight": ("games/pushfight/bga", "pushfighttest"),
+    "pushfight": ("games/pushfight/bga", "pushfight"),
     "pushfighttest": ("games/pushfight/bga", "pushfighttest"),
     "mandala": ("games/mandala/bga-prod", "mandala"),
     "mandalatest": ("games/mandala/bga-test", "mandalatest"),
@@ -100,7 +100,7 @@ def sync_directory(sftp, local_dir, remote_dir, dry_run=False):
 
             if needs_upload:
                 action = "[DRY-RUN UPLOAD]" if dry_run else "[SYNC]"
-                print(f"{action} {item} -> {r_path} ({l_stat.st_size} bytes)")
+                print(f"{action} {item} -> {r_path} ({l_stat.st_size} bytes)", flush=True)
                 if not dry_run:
                     sftp.put(l_path, r_path)
                 uploaded += 1
