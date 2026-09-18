@@ -72,6 +72,11 @@ class PlayerTurn extends GameState
         ];
     }
 
+    public function argPlayerTurn(): array
+    {
+        return $this->getArgs();
+    }
+
     /**
      * Action: Move a piece to an orthogonal connected empty square.
      */
@@ -135,7 +140,7 @@ class PlayerTurn extends GameState
         $playerName = $this->game->getPlayerNameById($activePlayerId);
         $pieceTypeName = ($piece['piece_type'] === 'king') ? clienttranslate('King') : clienttranslate('Pawn');
 
-        $turnArgs = $this->argPlayerTurn();
+        $turnArgs = $this->getArgs();
 
         $this->notify->all('pieceMoved', clienttranslate('${player_name} slides a ${piece_type} to (${target_r}, ${target_c})'), [
             'player_id' => $activePlayerId,
@@ -176,7 +181,7 @@ class PlayerTurn extends GameState
         }
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
-        $turnArgs = $this->argPlayerTurn();
+        $turnArgs = $this->getArgs();
 
         $this->notify->all('phaseChanged', clienttranslate('${player_name} finishes movement and prepares for mandatory push'), [
             'player_id' => $activePlayerId,
@@ -233,7 +238,7 @@ class PlayerTurn extends GameState
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
         $restoredPieces = $this->game->getAllPieces();
-        $turnArgs = $this->argPlayerTurn();
+        $turnArgs = $this->getArgs();
 
         $this->notify->all('turnUndone', clienttranslate('${player_name} undid moves and restarted turn'), [
             'player_id' => $activePlayerId,
