@@ -91,6 +91,25 @@ class SoundController {
 
 const sounds = new SoundController();
 
+class SetupPlacement {
+    constructor(game, bga) {
+        this.game = game;
+        this.bga = bga;
+    }
+
+    onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
+        this.game.currentSetupArgs = args;
+        this.game.clearHighlights();
+        this.game.updateSetupInteractions(args, isCurrentPlayerActive);
+    }
+
+    onLeavingState(args, isCurrentPlayerActive) {
+        this.game.currentSetupArgs = null;
+        this.game.clearHighlights();
+    }
+}
+
 class PlayerTurn {
     constructor(game, bga) {
         this.game = game;
@@ -98,6 +117,8 @@ class PlayerTurn {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
+        this.game.currentSetupArgs = null;
         this.game.currentArgs = args;
         this.game.selectedPieceId = null;
         this.game.clearHighlights();
@@ -120,7 +141,7 @@ class PlayerTurn {
             if (args.can_undo) {
                 this.bga.statusBar.addActionButton(_('↺ Undo Moves / Restart Turn'), () => {
                     this.bga.actions.performAction('actUndo');
-                }, { color: 'warning' });
+                }, { color: 'secondary' });
             }
         } else {
             if (phase === 'move') {
@@ -144,8 +165,13 @@ export class Game {
         this.bga = bga;
         this.selectedPieceId = null;
         this.currentArgs = null;
+        this.currentSetupArgs = null;
+        this.selectedSetupType = 'king';
         this.ROWS = 4;
         this.COLS = 8;
+
+        this.setupPlacement = new SetupPlacement(this, bga);
+        this.bga.states.register('SetupPlacement', this.setupPlacement);
 
         this.playerTurn = new PlayerTurn(this, bga);
         this.bga.states.register('PlayerTurn', this.playerTurn);
@@ -222,6 +248,45 @@ export class Game {
         }
     }
 
+    createPieceElement(p, anchoredId = 0) {
+        const pieceEl = document.createElement('div');
+        const isWhite = this.isWhitePlayer(p.player_id);
+        const teamClass = isWhite ? 'team-white' : 'team-brown';
+        const typeClass = p.piece_type === 'king' ? 'type-king' : 'type-pawn';
+
+        pieceEl.className = `pft-piece ${teamClass} ${typeClass}`;
+        pieceEl.id = `pft_piece_${p.id}`;
+        pieceEl.dataset.id = p.id;
+        pieceEl.dataset.playerId = p.player_id;
+        pieceEl.dataset.type = p.piece_type;
+
+        // Icon inside piece
+        const icon = document.createElement('div');
+        icon.className = 'pft-piece-icon';
+        if (p.piece_type === 'king') {
+            icon.innerHTML = `<span class="piece-symbol">♚</span>`;
+        } else {
+            icon.innerHTML = `<span class="piece-symbol">●</span>`;
+        }
+        pieceEl.appendChild(icon);
+
+        // Anchor badge
+        if (parseInt(p.id, 10) === parseInt(anchoredId, 10)) {
+            const anchorBadge = document.createElement('div');
+            anchorBadge.className = 'pft-anchor-badge';
+            anchorBadge.textContent = '⚓';
+            anchorBadge.title = _('Anchored piece: Locked and cannot be moved or pushed this turn');
+            pieceEl.appendChild(anchorBadge);
+        }
+
+        pieceEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.onPieceClicked(parseInt(p.id, 10));
+        });
+
+        return pieceEl;
+    }
+
     renderPieces() {
         // Clear all existing pieces from cells
         document.querySelectorAll('.pft-piece').forEach(el => el.remove());
@@ -237,41 +302,7 @@ export class Game {
             const cell = document.getElementById(`pft_cell_${r}_${c}`);
             if (!cell) return;
 
-            const pieceEl = document.createElement('div');
-            const isWhite = this.isWhitePlayer(p.player_id);
-            const teamClass = isWhite ? 'team-white' : 'team-brown';
-            const typeClass = p.piece_type === 'king' ? 'type-king' : 'type-pawn';
-
-            pieceEl.className = `pft-piece ${teamClass} ${typeClass}`;
-            pieceEl.id = `pft_piece_${p.id}`;
-            pieceEl.dataset.id = p.id;
-            pieceEl.dataset.playerId = p.player_id;
-            pieceEl.dataset.type = p.piece_type;
-
-            // Icon inside piece
-            const icon = document.createElement('div');
-            icon.className = 'pft-piece-icon';
-            if (p.piece_type === 'king') {
-                icon.innerHTML = `<span class="piece-symbol">♚</span>`;
-            } else {
-                icon.innerHTML = `<span class="piece-symbol">●</span>`;
-            }
-            pieceEl.appendChild(icon);
-
-            // Anchor badge
-            if (parseInt(p.id, 10) === parseInt(anchoredId, 10)) {
-                const anchorBadge = document.createElement('div');
-                anchorBadge.className = 'pft-anchor-badge';
-                anchorBadge.textContent = '⚓';
-                anchorBadge.title = _('Anchored piece: Locked and cannot be moved or pushed this turn');
-                pieceEl.appendChild(anchorBadge);
-            }
-
-            pieceEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.onPieceClicked(parseInt(p.id, 10));
-            });
-
+            const pieceEl = this.createPieceElement(p, anchoredId);
             cell.appendChild(pieceEl);
         });
     }
@@ -280,7 +311,6 @@ export class Game {
         const player = this.gamedatas.players?.[playerId];
         if (player) {
             const color = (player.color || player.player_color || '').toLowerCase().replace('#', '');
-            // White / Ivory color starts with 'f' (e.g. 'f5eedc', 'ffffff') or is lighter
             if (color === 'f5eedc' || color === 'ffffff' || color.startsWith('f') || color.startsWith('e')) {
                 return true;
             }
@@ -288,7 +318,6 @@ export class Game {
                 return false;
             }
         }
-        // Fallback: check first player defined in player table or natural ID
         return false;
     }
 
@@ -302,31 +331,126 @@ export class Game {
         return false;
     }
 
-    getActivePlayerId() {
-        if (this.bga?.players && typeof this.bga.players.getActivePlayerId === 'function') {
-            return this.bga.players.getActivePlayerId();
+    clearActionButtons() {
+        try {
+            if (this.bga && this.bga.statusBar && typeof this.bga.statusBar.removeActionButtons === 'function') {
+                this.bga.statusBar.removeActionButtons();
+            } else if (this.bga && this.bga.statusBar && typeof this.bga.statusBar.clearActionButtons === 'function') {
+                this.bga.statusBar.clearActionButtons();
+            }
+        } catch (e) {}
+        const actionsContainer = document.getElementById('generalactions');
+        if (actionsContainer) {
+            actionsContainer.innerHTML = '';
         }
-        if (typeof gameui !== 'undefined' && typeof gameui.getActivePlayerId === 'function') {
-            return gameui.getActivePlayerId();
+    }
+
+    updateSetupInteractions(args, isCurrentPlayerActive) {
+        this.clearHighlights();
+        this.clearActionButtons();
+
+        if (!isCurrentPlayerActive) {
+            this.bga.statusBar.setTitle(_('${actplayer} is positioning their pieces on their side of the board...'));
+            return;
         }
-        return null;
+
+        const kingsRem = args.kings_remaining ?? 0;
+        const pawnsRem = args.pawns_remaining ?? 0;
+
+        if (args.can_confirm) {
+            this.bga.statusBar.setTitle(_('${you} positioned all 5 pieces! Confirm placement to continue.'));
+        } else {
+            this.bga.statusBar.setTitle(
+                _('${you}: Position your pieces on your side of the line (${kings} Kings, ${pawns} Pawns left)')
+                    .replace('${kings}', kingsRem)
+                    .replace('${pawns}', pawnsRem)
+            );
+        }
+
+        // Action buttons
+        this.bga.statusBar.addActionButton(
+            _('Square King (${rem} left)').replace('${rem}', kingsRem),
+            () => {
+                this.selectedSetupType = 'king';
+                this.updateSetupInteractions(this.currentSetupArgs, true);
+            },
+            { color: (this.selectedSetupType === 'king' && kingsRem > 0) ? 'primary' : 'secondary', disabled: (kingsRem <= 0) }
+        );
+
+        this.bga.statusBar.addActionButton(
+            _('Round Pawn (${rem} left)').replace('${rem}', pawnsRem),
+            () => {
+                this.selectedSetupType = 'pawn';
+                this.updateSetupInteractions(this.currentSetupArgs, true);
+            },
+            { color: (this.selectedSetupType === 'pawn' && pawnsRem > 0) ? 'primary' : 'secondary', disabled: (pawnsRem <= 0) }
+        );
+
+        this.bga.statusBar.addActionButton(
+            _('⚡ Standard Preset'),
+            () => this.bga.actions.performAction('actStandardPreset'),
+            { color: 'secondary' }
+        );
+
+        const totalPlaced = (args.kings_placed || 0) + (args.pawns_placed || 0);
+        if (totalPlaced > 0) {
+            this.bga.statusBar.addActionButton(
+                _('Clear All'),
+                () => this.bga.actions.performAction('actClearAll'),
+                { color: 'secondary' }
+            );
+        }
+
+        if (args.can_confirm) {
+            this.bga.statusBar.addActionButton(
+                _('✓ Confirm Placement'),
+                () => this.bga.actions.performAction('actConfirmPlacement'),
+                { color: 'primary' }
+            );
+        }
+
+        // Highlight valid placement cells on player's half
+        const minCol = args.min_col || (args.is_white ? 1 : 5);
+        const maxCol = args.max_col || (args.is_white ? 4 : 8);
+
+        for (let r = 1; r <= this.ROWS; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (!this.isValidSquare(r, c)) continue;
+                const cell = document.getElementById(`pft_cell_${r}_${c}`);
+                if (!cell) continue;
+
+                const hasPiece = (this.gamedatas.pieces || []).some(
+                    p => p.is_alive && parseInt(p.pos_x, 10) === c && parseInt(p.pos_y, 10) === r
+                );
+
+                if (!hasPiece && (kingsRem > 0 || pawnsRem > 0)) {
+                    cell.classList.add('pft-valid-setup-cell');
+                }
+            }
+        }
+
+        // Mark player's own pieces as removable
+        document.querySelectorAll(`.pft-piece[data-player-id="${this.bga.player_id}"]`).forEach(el => {
+            el.classList.add('setup-removable');
+            el.title = _('Click to remove piece back to supply');
+        });
     }
 
     updateBoardInteractions(isCurrentPlayerActive) {
-        document.querySelectorAll('.pft-piece').forEach(el => el.classList.remove('selectable', 'selected'));
+        this.clearHighlights();
+
         if (!isCurrentPlayerActive || !this.currentArgs) return;
 
         const phase = this.currentArgs.phase || 'move';
-        const activePlayerId = this.getActivePlayerId();
+        const movesRemaining = this.currentArgs.moves_remaining ?? 2;
 
-        if (phase === 'move' && this.currentArgs.moves_remaining > 0) {
+        if (phase === 'move' && movesRemaining > 0) {
             const validMoves = this.currentArgs.valid_moves || {};
             Object.keys(validMoves).forEach(pieceId => {
                 const pieceEl = document.getElementById(`pft_piece_${pieceId}`);
                 if (pieceEl) pieceEl.classList.add('selectable');
             });
         } else {
-            // Push phase
             const validPushes = this.currentArgs.valid_pushes || {};
             Object.keys(validPushes).forEach(kingId => {
                 const kingEl = document.getElementById(`pft_piece_${kingId}`);
@@ -336,6 +460,15 @@ export class Game {
     }
 
     onPieceClicked(pieceId) {
+        if (this.currentSetupArgs) {
+            if (!this.isCurrentPlayerActive()) return;
+            const p = (this.gamedatas.pieces || []).find(x => parseInt(x.id, 10) === parseInt(pieceId, 10));
+            if (p && parseInt(p.player_id, 10) === parseInt(this.bga.player_id, 10)) {
+                this.bga.actions.performAction('actRemovePiece', { piece_id: pieceId });
+            }
+            return;
+        }
+
         if (!this.isCurrentPlayerActive() || !this.currentArgs) return;
 
         const phase = this.currentArgs.phase || 'move';
@@ -400,6 +533,22 @@ export class Game {
     }
 
     onCellClicked(r, c) {
+        if (this.currentSetupArgs) {
+            if (!this.isCurrentPlayerActive()) return;
+            const minCol = this.currentSetupArgs.min_col || 1;
+            const maxCol = this.currentSetupArgs.max_col || 4;
+            if (c >= minCol && c <= maxCol && this.isValidSquare(r, c)) {
+                const existing = (this.gamedatas.pieces || []).find(
+                    x => x.is_alive && parseInt(x.pos_x, 10) === c && parseInt(x.pos_y, 10) === r
+                );
+                if (!existing) {
+                    const type = this.selectedSetupType || 'king';
+                    this.bga.actions.performAction('actPlacePiece', { piece_type: type, r, c });
+                }
+            }
+            return;
+        }
+
         if (!this.selectedPieceId || !this.currentArgs) return;
 
         const cell = document.getElementById(`pft_cell_${r}_${c}`);
@@ -414,16 +563,148 @@ export class Game {
 
     clearHighlights() {
         document.querySelectorAll('.pft-valid-move').forEach(el => el.classList.remove('pft-valid-move'));
+        document.querySelectorAll('.pft-valid-setup-cell').forEach(el => el.classList.remove('pft-valid-setup-cell'));
         document.querySelectorAll('.pft-piece.selected').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('.pft-piece.setup-removable').forEach(el => el.classList.remove('setup-removable'));
         document.querySelectorAll('.pft-push-arrow').forEach(el => el.remove());
+        this.clearActionButtons();
     }
 
     setupNotifications() {
         this.bga.notifications.setupPromiseNotifications();
     }
 
-    async notif_pieceMoved(args) {
+    _getNotifArgs(notif) {
+        if (!notif) return {};
+        return (notif.args !== undefined) ? notif.args : notif;
+    }
+
+    async notif_piecePlaced(notif) {
         sounds.playSlide();
+        const args = this._getNotifArgs(notif);
+        const p = {
+            id: args.piece_id,
+            player_id: args.player_id,
+            piece_type: args.piece_type,
+            pos_x: args.c,
+            pos_y: args.r,
+            is_alive: 1,
+        };
+        if (!this.gamedatas.pieces) this.gamedatas.pieces = [];
+        this.gamedatas.pieces.push(p);
+
+        const targetCell = document.getElementById(`pft_cell_${args.r}_${args.c}`);
+        if (targetCell) {
+            const el = this.createPieceElement(p);
+            if (parseInt(args.player_id, 10) === parseInt(this.bga.player_id, 10)) {
+                el.classList.add('setup-removable');
+            }
+            targetCell.appendChild(el);
+        }
+
+        if (this.currentSetupArgs && this.isCurrentPlayerActive()) {
+            if (args.piece_type === 'king') {
+                this.currentSetupArgs.kings_placed = (this.currentSetupArgs.kings_placed || 0) + 1;
+                this.currentSetupArgs.kings_remaining = Math.max(0, 3 - this.currentSetupArgs.kings_placed);
+            } else {
+                this.currentSetupArgs.pawns_placed = (this.currentSetupArgs.pawns_placed || 0) + 1;
+                this.currentSetupArgs.pawns_remaining = Math.max(0, 2 - this.currentSetupArgs.pawns_placed);
+            }
+            this.currentSetupArgs.can_confirm = (this.currentSetupArgs.kings_placed === 3 && this.currentSetupArgs.pawns_placed === 2);
+            if (this.selectedSetupType === 'king' && this.currentSetupArgs.kings_remaining <= 0 && this.currentSetupArgs.pawns_remaining > 0) {
+                this.selectedSetupType = 'pawn';
+            } else if (this.selectedSetupType === 'pawn' && this.currentSetupArgs.pawns_remaining <= 0 && this.currentSetupArgs.kings_remaining > 0) {
+                this.selectedSetupType = 'king';
+            }
+            this.updateSetupInteractions(this.currentSetupArgs, true);
+        }
+    }
+
+    async notif_pieceRemoved(notif) {
+        sounds.playSlide();
+        const args = this._getNotifArgs(notif);
+        const el = document.getElementById(`pft_piece_${args.piece_id}`);
+        if (el) el.remove();
+
+        if (this.gamedatas.pieces) {
+            this.gamedatas.pieces = this.gamedatas.pieces.filter(x => parseInt(x.id, 10) !== parseInt(args.piece_id, 10));
+        }
+
+        if (this.currentSetupArgs && this.isCurrentPlayerActive()) {
+            if (args.piece_type === 'king') {
+                this.currentSetupArgs.kings_placed = Math.max(0, (this.currentSetupArgs.kings_placed || 1) - 1);
+                this.currentSetupArgs.kings_remaining = 3 - this.currentSetupArgs.kings_placed;
+            } else {
+                this.currentSetupArgs.pawns_placed = Math.max(0, (this.currentSetupArgs.pawns_placed || 1) - 1);
+                this.currentSetupArgs.pawns_remaining = 2 - this.currentSetupArgs.pawns_placed;
+            }
+            this.currentSetupArgs.can_confirm = (this.currentSetupArgs.kings_placed === 3 && this.currentSetupArgs.pawns_placed === 2);
+            this.updateSetupInteractions(this.currentSetupArgs, true);
+        }
+    }
+
+    async notif_presetPlaced(notif) {
+        sounds.playSlide();
+        const args = this._getNotifArgs(notif);
+        document.querySelectorAll(`.pft-piece[data-player-id="${args.player_id}"]`).forEach(el => el.remove());
+
+        if (this.gamedatas.pieces) {
+            this.gamedatas.pieces = this.gamedatas.pieces.filter(x => parseInt(x.player_id, 10) !== parseInt(args.player_id, 10));
+        }
+
+        (args.pieces || []).forEach(p => {
+            this.gamedatas.pieces.push(p);
+            const cell = document.getElementById(`pft_cell_${p.pos_y}_${p.pos_x}`);
+            if (cell) {
+                const el = this.createPieceElement(p);
+                if (parseInt(args.player_id, 10) === parseInt(this.bga.player_id, 10)) {
+                    el.classList.add('setup-removable');
+                }
+                cell.appendChild(el);
+            }
+        });
+
+        if (this.currentSetupArgs && this.isCurrentPlayerActive()) {
+            this.currentSetupArgs.kings_placed = 3;
+            this.currentSetupArgs.pawns_placed = 2;
+            this.currentSetupArgs.kings_remaining = 0;
+            this.currentSetupArgs.pawns_remaining = 0;
+            this.currentSetupArgs.can_confirm = true;
+            this.updateSetupInteractions(this.currentSetupArgs, true);
+        }
+    }
+
+    async notif_piecesCleared(notif) {
+        sounds.playSlide();
+        const args = this._getNotifArgs(notif);
+        document.querySelectorAll(`.pft-piece[data-player-id="${args.player_id}"]`).forEach(el => el.remove());
+
+        if (this.gamedatas.pieces) {
+            this.gamedatas.pieces = this.gamedatas.pieces.filter(x => parseInt(x.player_id, 10) !== parseInt(args.player_id, 10));
+        }
+
+        if (this.currentSetupArgs && this.isCurrentPlayerActive()) {
+            this.currentSetupArgs.kings_placed = 0;
+            this.currentSetupArgs.pawns_placed = 0;
+            this.currentSetupArgs.kings_remaining = 3;
+            this.currentSetupArgs.pawns_remaining = 2;
+            this.currentSetupArgs.can_confirm = false;
+            this.updateSetupInteractions(this.currentSetupArgs, true);
+        }
+    }
+
+    async notif_playerSetupCompleted(notif) {
+        // Notification logged in chat
+    }
+
+    async notif_setupFinished(notif) {
+        this.currentSetupArgs = null;
+        this.clearHighlights();
+    }
+
+    async notif_pieceMoved(notif) {
+        sounds.playSlide();
+        const args = this._getNotifArgs(notif);
         const pieceEl = document.getElementById(`pft_piece_${args.piece_id}`);
         const targetCell = document.getElementById(`pft_cell_${args.to_r}_${args.to_c}`);
 
@@ -441,7 +722,8 @@ export class Game {
         this.selectedPieceId = null;
     }
 
-    async notif_phaseChanged(args) {
+    async notif_phaseChanged(notif) {
+        const args = this._getNotifArgs(notif);
         this.gamedatas.turn_phase = args.phase;
         const phasePill = document.getElementById('pft_phase_pill');
         if (phasePill) {
@@ -451,9 +733,10 @@ export class Game {
         this.selectedPieceId = null;
     }
 
-    async notif_pushExecuted(args) {
+    async notif_pushExecuted(notif) {
         sounds.playThud();
         setTimeout(() => sounds.playAnchor(), 220);
+        const args = this._getNotifArgs(notif);
 
         // Shift pieces
         const shifted = args.shifted_pieces || [];
@@ -489,7 +772,8 @@ export class Game {
         this.selectedPieceId = null;
     }
 
-    async notif_newTurn(args) {
+    async notif_newTurn(notif) {
+        const args = this._getNotifArgs(notif);
         this.gamedatas.turn_count = args.turn_count;
         this.gamedatas.turn_phase = args.turn_phase;
         this.gamedatas.anchored_piece_id = args.anchored_piece_id;
@@ -504,8 +788,9 @@ export class Game {
         this.selectedPieceId = null;
     }
 
-    async notif_turnUndone(args) {
+    async notif_turnUndone(notif) {
         sounds.playSlide();
+        const args = this._getNotifArgs(notif);
         this.gamedatas.turn_phase = args.turn_phase;
         this.gamedatas.pieces = args.pieces;
 
@@ -520,8 +805,9 @@ export class Game {
         this.selectedPieceId = null;
     }
 
-    async notif_gameWon(args) {
+    async notif_gameWon(notif) {
         sounds.playWin();
+        const args = this._getNotifArgs(notif);
         this.bga.gameArea.getElement().insertAdjacentHTML('afterbegin', `
             <div class="pft-victory-banner">
                 <h2>🏆 ${args.winner_name} WINS!</h2>

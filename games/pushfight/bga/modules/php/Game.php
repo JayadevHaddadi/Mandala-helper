@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace Bga\Games\pushfight;
 
 use Bga\Games\pushfight\States\PlayerTurn;
+use Bga\Games\pushfight\States\SetupPlacement;
 use Bga\GameFramework\UserException;
 
 class Game extends \Bga\GameFramework\Table
@@ -380,6 +381,7 @@ class Game extends \Bga\GameFramework\Table
         $result['moves_remaining'] = (int) $this->globals->get('moves_remaining', 2);
         $result['turn_phase'] = (string) $this->globals->get('turn_phase', 'move');
         $result['turn_count'] = (int) $this->globals->get('turn_count', 1);
+        $result['setup_variant'] = (int) $this->globals->get('setup_variant', 1);
 
         return $result;
     }
@@ -389,16 +391,36 @@ class Game extends \Bga\GameFramework\Table
      */
     protected function setupNewGame($players, $options = [])
     {
-        $gameinfos = $this->getGameinfos();
-        $default_colors = $gameinfos['player_colors'];
+        $setupOption = isset($options[100]) ? (int) $options[100] : (int) $this->getGameStateValue('100', 1);
+        $firstPlayerOption = isset($options[101]) ? (int) $options[101] : (int) $this->getGameStateValue('101', 1);
 
+        $rawIds = array_keys($players);
+        // Table creator is rawIds[0], opponent is rawIds[1]
+        if ($firstPlayerOption === 2) {
+            // Table Creator plays White / First Player
+            $playerIds = [(int)$rawIds[0], (int)$rawIds[1]];
+        } elseif ($firstPlayerOption === 3) {
+            // Opponent plays White / First Player
+            $playerIds = [(int)$rawIds[1], (int)$rawIds[0]];
+        } else {
+            // Option 1: Random
+            if (bga_rand(0, 1) === 1) {
+                $playerIds = [(int)$rawIds[1], (int)$rawIds[0]];
+            } else {
+                $playerIds = [(int)$rawIds[0], (int)$rawIds[1]];
+            }
+        }
+
+        // White is player_no 1, Brown is player_no 2
+        $colors = ['f5eedc', '4a2c11'];
         $query_values = [];
-        $playerIds = [];
-        foreach ($players as $player_id => $player) {
-            $playerIds[] = (int) $player_id;
-            $color = array_shift($default_colors);
-            $query_values[] = vsprintf("(%s, '%s', '%s')", [
+        $pNo = 1;
+        foreach ($playerIds as $player_id) {
+            $player = $players[$player_id];
+            $color = array_shift($colors);
+            $query_values[] = vsprintf("(%s, %d, '%s', '%s')", [
                 $player_id,
+                $pNo++,
                 $color,
                 addslashes($player['player_name']),
             ]);
@@ -406,15 +428,35 @@ class Game extends \Bga\GameFramework\Table
 
         static::DbQuery(
             sprintf(
-                "INSERT INTO `player` (`player_id`, `player_color`, `player_name`) VALUES %s",
+                "INSERT INTO `player` (`player_id`, `player_no`, `player_color`, `player_name`) VALUES %s",
                 implode(",", $query_values)
             )
         );
 
         $this->reloadPlayersBasicInfos();
-
         $this->ensureSchema();
         static::DbQuery("DELETE FROM `piece`");
+
+        $p1 = $playerIds[0]; // White
+        $p2 = $playerIds[1]; // Brown
+
+        // Initialize game globals
+        $this->globals->set('setup_variant', $setupOption);
+        $this->globals->set('anchored_piece_id', 0);
+        $this->globals->set('moves_remaining', 2);
+        $this->globals->set('turn_phase', 'move');
+        $this->globals->set('turn_count', 1);
+        $this->globals->set('moves_made_this_turn', 0);
+
+        // Initialize game statistics
+        $this->tableStats->init(['turns_number', 'pushes_number'], 0);
+        $this->playerStats->init(['moves_number', 'pushes_number', 'knocked_off_pieces'], 0);
+
+        if ($setupOption === 2) {
+            // Free Placement (Pro Variant): White places first
+            $this->gamestate->changeActivePlayer($p1);
+            return SetupPlacement::class;
+        }
 
         // Standard Push Fight initial layout:
         // Player 1 (White / left half, Cols 1..4):
@@ -423,9 +465,6 @@ class Game extends \Bga\GameFramework\Table
         // Player 2 (Brown / right half, Cols 5..8):
         //   Kings: (r=2, c=5), (r=3, c=5), (r=4, c=5)
         //   Pawns: (r=2, c=6), (r=3, c=6)
-        $p1 = $playerIds[0];
-        $p2 = $playerIds[1];
-
         $initialPieces = [
             // Player 1
             [$p1, 'king', 4, 2],
@@ -451,20 +490,10 @@ class Game extends \Bga\GameFramework\Table
             implode(',', $pieceInserts)
         );
 
-        // Initialize game globals
-        $this->globals->set('anchored_piece_id', 0);
-        $this->globals->set('moves_remaining', 2);
-        $this->globals->set('turn_phase', 'move');
-        $this->globals->set('turn_count', 1);
-        $this->globals->set('moves_made_this_turn', 0);
         $this->globals->set('turn_start_positions', json_encode($this->getPiecePositionsMap()));
 
-        // Initialize game statistics
-        $this->tableStats->init(['turns_number', 'pushes_number'], 0);
-        $this->playerStats->init(['moves_number', 'pushes_number', 'knocked_off_pieces'], 0);
-
-        // Activate first player
-        $this->activeNextPlayer();
+        // Activate first player (White)
+        $this->gamestate->changeActivePlayer($p1);
 
         return PlayerTurn::class;
     }

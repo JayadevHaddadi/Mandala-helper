@@ -333,3 +333,25 @@
     0% { transform: scale(0.8); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
+
+/* Setup Placement Cell Highlight */
+.pft-cell.pft-valid-setup-cell {
+    background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%) !important;
+    border: 2px dashed #2e7d32 !important;
+    cursor: pointer;
+    animation: pft-pulse-green 1.4s infinite alternate;
+}
+
+@keyframes pft-pulse-green {
+    0% { transform: scale(0.97); box-shadow: 0 0 6px rgba(76, 175, 80, 0.5); }
+    100% { transform: scale(1.02); box-shadow: 0 0 12px rgba(76, 175, 80, 0.85); }
+}
+
+.pft-piece.setup-removable {
+    cursor: pointer;
+}
+.pft-piece.setup-removable:hover {
+    box-shadow: 0 0 14px rgba(220, 50, 50, 0.85) !important;
+    transform: scale(1.08);
+}
+

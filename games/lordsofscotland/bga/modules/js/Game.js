@@ -14,6 +14,7 @@ class PlayerTurn {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
         if (isCurrentPlayerActive) {
             const extraMuster = args.extra_muster_active;
             if (extraMuster) {
@@ -44,6 +45,7 @@ class ResolvePowerWemyss {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
         if (isCurrentPlayerActive) {
             this.bga.statusBar.setTitle(_('${you} must choose a clan card from any army to discard (Clan Wemyss)'));
             this.game.highlightArmyCardsForWemyss(args.eligible_cards);
@@ -65,6 +67,7 @@ class ResolvePowerFergusson {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
         if (isCurrentPlayerActive) {
             this.bga.statusBar.setTitle(_('${you} must choose an army card to swap with your Fergusson (Clan Fergusson)'));
             this.game.highlightArmyCardsForFergusson(args.eligible_cards);
@@ -86,6 +89,7 @@ class ResolvePowerScott {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
         if (isCurrentPlayerActive) {
             this.bga.statusBar.setTitle(_('${you} must choose a face-up clan card to copy its power (Clan Scott)'));
             this.game.highlightArmyCardsForScott(args.eligible_cards);
@@ -107,6 +111,7 @@ class ResolvePowerCockburn {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
         if (isCurrentPlayerActive) {
             this.bga.statusBar.setTitle(_('${you} must choose a card from the Supporter row to swap into your army (Clan Cockburn)'));
             this.game.highlightSupportersForCockburn(args.supporters);
@@ -128,6 +133,7 @@ class DraftSupporter {
     }
 
     onEnteringState(args, isCurrentPlayerActive) {
+        args = args || {};
         if (isCurrentPlayerActive) {
             const draftsLeft = args.drafts_remaining || 1;
             this.bga.statusBar.setTitle(
@@ -418,7 +424,7 @@ export class Game {
         this.selectedHandCardId = card.card_id;
 
         // Display action buttons in status bar
-        this.bga.statusBar.clearActionButtons();
+        this.clearActionButtons();
 
         const clanInfo = this.gamedatas.clans[card.clan] || { name: card.clan, power: '' };
         const canPower = card.can_activate_power;
@@ -428,7 +434,7 @@ export class Game {
                 ? _('Muster Face-Up (Activate ${power})').replace('${power}', clanInfo.power)
                 : _('Muster Face-Up (${clan})').replace('${clan}', clanInfo.name),
             () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: true }),
-            { color: canPower ? 'primary' : 'normal' }
+            { color: canPower ? 'primary' : 'secondary' }
         );
 
         this.bga.statusBar.addActionButton(
@@ -442,9 +448,9 @@ export class Game {
             () => {
                 if (cardEl) cardEl.classList.remove('selected');
                 this.selectedHandCardId = null;
-                this.bga.statusBar.clearActionButtons();
+                this.clearActionButtons();
             },
-            { color: 'gray' }
+            { color: 'secondary' }
         );
     }
 
@@ -473,7 +479,7 @@ export class Game {
     }
 
     highlightArmyCardsForWemyss(eligibleCards) {
-        const eligibleIds = eligibleCards.map(c => parseInt(c.card_id));
+        const eligibleIds = (eligibleCards || []).map(c => parseInt(c.card_id));
         document.querySelectorAll('.los-army-cards-row .los-card').forEach(el => {
             const cardId = parseInt(el.dataset.cardId);
             if (eligibleIds.includes(cardId)) {
@@ -486,7 +492,7 @@ export class Game {
     }
 
     highlightArmyCardsForFergusson(eligibleCards) {
-        const eligibleIds = eligibleCards.map(c => parseInt(c.card_id));
+        const eligibleIds = (eligibleCards || []).map(c => parseInt(c.card_id));
         document.querySelectorAll('.los-army-cards-row .los-card').forEach(el => {
             const cardId = parseInt(el.dataset.cardId);
             if (eligibleIds.includes(cardId)) {
@@ -499,7 +505,7 @@ export class Game {
     }
 
     highlightArmyCardsForScott(eligibleCards) {
-        const eligibleIds = eligibleCards.map(c => parseInt(c.card_id));
+        const eligibleIds = (eligibleCards || []).map(c => parseInt(c.card_id));
         document.querySelectorAll('.los-army-cards-row .los-card').forEach(el => {
             const cardId = parseInt(el.dataset.cardId);
             if (eligibleIds.includes(cardId)) {
@@ -531,22 +537,42 @@ export class Game {
         });
     }
 
+    clearActionButtons() {
+        try {
+            if (this.bga && this.bga.statusBar && typeof this.bga.statusBar.removeActionButtons === 'function') {
+                this.bga.statusBar.removeActionButtons();
+            } else if (this.bga && this.bga.statusBar && typeof this.bga.statusBar.clearActionButtons === 'function') {
+                this.bga.statusBar.clearActionButtons();
+            }
+        } catch (e) {
+            // Ignore if statusBar is not fully available
+        }
+        const actionsContainer = document.getElementById('generalactions');
+        if (actionsContainer) {
+            actionsContainer.innerHTML = '';
+        }
+    }
+
     clearHighlights() {
         document.querySelectorAll('.highlight-action, .highlight-target, .selected').forEach(el => {
             el.classList.remove('highlight-action', 'highlight-target', 'selected');
             el.onclick = null;
         });
-        if (this.bga && this.bga.statusBar) {
-            this.bga.statusBar.clearActionButtons();
-        }
+        this.clearActionButtons();
     }
 
     setupNotifications() {
         this.bga.notifications.setupPromiseNotifications();
     }
 
+    _getNotifArgs(notif) {
+        if (!notif) return {};
+        return (notif.args !== undefined) ? notif.args : notif;
+    }
+
     async notif_cardRecruited(notif) {
-        const { player_id, slot, card, refill_card } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { player_id, slot, card, refill_card } = args;
         // Refresh recruit row slot
         const slotEl = document.getElementById(`recruit-slot-${slot}`);
         if (slotEl) {
@@ -561,15 +587,25 @@ export class Game {
             if (handContainer && card) {
                 handContainer.appendChild(this.createCardElement(card, 'hand'));
             }
+            const countEl = document.getElementById('los-hand-count');
+            if (countEl && handContainer) {
+                countEl.textContent = `(${handContainer.children.length} / 10 cards)`;
+            }
         }
     }
 
     async notif_cardMustered(notif) {
-        const { player_id, card_id, clan, strength, is_face_up } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { player_id, card_id, clan, strength, is_face_up } = args;
         // Remove from current player's hand if it's them
         const handCardEl = document.getElementById(`card-${card_id}`);
         if (handCardEl && player_id === this.bga.player_id) {
             handCardEl.remove();
+            const countEl = document.getElementById('los-hand-count');
+            const handContainer = document.getElementById('los-hand-cards');
+            if (countEl && handContainer) {
+                countEl.textContent = `(${handContainer.children.length} / 10 cards)`;
+            }
         }
         // Add to player's army
         const armyRow = document.getElementById(`army-cards-${player_id}`);
@@ -585,11 +621,15 @@ export class Game {
             };
             armyRow.appendChild(this.createCardElement(cardData, 'army', player_id));
         }
+        const armyStrengthEl = document.getElementById(`army-strength-${player_id}`);
+        if (armyStrengthEl && armyRow) {
+            armyStrengthEl.textContent = `Army: ${armyRow.children.length} cards`;
+        }
     }
 
     async notif_powerActivated(notif) {
-        // Power activation visual celebration
-        const { player_id, clan, strength, power_desc } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { player_id, clan, strength, power_desc } = args;
         const armyRow = document.getElementById(`army-cards-${player_id}`);
         if (armyRow) {
             armyRow.classList.add('power-burst-animation');
@@ -598,15 +638,21 @@ export class Game {
     }
 
     async notif_cardDrawn(notif) {
-        const { card } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { card } = args;
         const handContainer = document.getElementById('los-hand-cards');
         if (handContainer && card) {
             handContainer.appendChild(this.createCardElement(card, 'hand'));
         }
+        const countEl = document.getElementById('los-hand-count');
+        if (countEl && handContainer) {
+            countEl.textContent = `(${handContainer.children.length} / 10 cards)`;
+        }
     }
 
     async notif_newRoundStarted(notif) {
-        const { round_num, slot, flipped_card } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { round_num, slot, flipped_card } = args;
         const roundEl = document.getElementById('los-round-val');
         if (roundEl) roundEl.textContent = `${round_num} / 5`;
 
@@ -618,25 +664,29 @@ export class Game {
     }
 
     async notif_skirmishResolved(notif) {
-        const { rankings } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { rankings } = args;
         // Reveal all army cards
-        rankings.forEach(r => {
-            const armyRow = document.getElementById(`army-cards-${r.player_id}`);
-            if (armyRow && r.cards) {
-                armyRow.innerHTML = '';
-                r.cards.forEach(c => {
-                    armyRow.appendChild(this.createCardElement(c, 'army', r.player_id));
-                });
-            }
-            const strengthEl = document.getElementById(`army-strength-${r.player_id}`);
-            if (strengthEl) {
-                strengthEl.innerHTML = `Army: <strong>${r.total}</strong> pts ${r.doubled ? '🔥 (DOUBLED!)' : ''}`;
-            }
-        });
+        if (Array.isArray(rankings)) {
+            rankings.forEach(r => {
+                const armyRow = document.getElementById(`army-cards-${r.player_id}`);
+                if (armyRow && r.cards) {
+                    armyRow.innerHTML = '';
+                    r.cards.forEach(c => {
+                        armyRow.appendChild(this.createCardElement(c, 'army', r.player_id));
+                    });
+                }
+                const strengthEl = document.getElementById(`army-strength-${r.player_id}`);
+                if (strengthEl) {
+                    strengthEl.innerHTML = `Army: <strong>${r.total}</strong> pts ${r.doubled ? '🔥 (DOUBLED!)' : ''}`;
+                }
+            });
+        }
     }
 
     async notif_supporterDrafted(notif) {
-        const { player_id, card_id, new_score } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { player_id, card_id, new_score } = args;
         // Remove from supporter row
         const cardEl = document.getElementById(`card-${card_id}`);
         if (cardEl) cardEl.remove();
@@ -647,7 +697,8 @@ export class Game {
     }
 
     async notif_newSkirmishStarted(notif) {
-        const { skirmish_num, winner_id } = notif.args;
+        const args = this._getNotifArgs(notif);
+        const { skirmish_num, winner_id } = args;
         const skirmishEl = document.getElementById('los-skirmish-val');
         if (skirmishEl) skirmishEl.textContent = `#${skirmish_num}`;
 
@@ -656,6 +707,44 @@ export class Game {
 
         this.gamedatas.victor_initiative = winner_id;
         this.updateVictorInitiativeBadge();
+    }
+
+    async notif_powerWemyssUsed(notif) {
+        const args = this._getNotifArgs(notif);
+        const { victim_id, card_id } = args;
+        const cardEl = document.getElementById(`card-${card_id}`);
+        if (cardEl) cardEl.remove();
+        const armyRow = document.getElementById(`army-cards-${victim_id}`);
+        const armyStrengthEl = document.getElementById(`army-strength-${victim_id}`);
+        if (armyStrengthEl && armyRow) {
+            armyStrengthEl.textContent = `Army: ${armyRow.children.length} cards`;
+        }
+    }
+
+    async notif_powerFergussonUsed(notif) {
+        const args = this._getNotifArgs(notif);
+        const { player_id, target_player_id, fergusson_card_id, target_card_id, new_own_card, new_target_card } = args;
+        const ownEl = document.getElementById(`card-${fergusson_card_id}`);
+        const targetEl = document.getElementById(`card-${target_card_id}`);
+        if (ownEl && targetEl) {
+            const ownParent = ownEl.parentNode;
+            const targetParent = targetEl.parentNode;
+            ownParent.insertBefore(targetEl, ownEl);
+            targetParent.appendChild(ownEl);
+        }
+    }
+
+    async notif_powerCockburnUsed(notif) {
+        const args = this._getNotifArgs(notif);
+        const { player_id, cockburn_card_id, supporter_card_id, new_army_card, new_supporter_card } = args;
+        const armyCardEl = document.getElementById(`card-${cockburn_card_id}`);
+        const supporterCardEl = document.getElementById(`card-${supporter_card_id}`);
+        if (armyCardEl && supporterCardEl) {
+            const armyParent = armyCardEl.parentNode;
+            const supporterParent = supporterCardEl.parentNode;
+            armyParent.insertBefore(supporterCardEl, armyCardEl);
+            supporterParent.appendChild(armyCardEl);
+        }
     }
 }
 
