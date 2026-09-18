@@ -72,18 +72,22 @@ class Game extends \Bga\GameFramework\Table
     /**
      * Check if coordinates (r, c) form a valid square on the 26-square board.
      * r in [1..4], c in [1..8].
-     * Cutout Top-Right: Row 1, Cols 6, 7, 8.
-     * Cutout Bottom-Left: Row 4, Cols 1, 2, 3.
+     * Canonical Push Fight board layout:
+     * - Row 1 (Top): Cols 3..7 (5 squares; cols 1, 2, 8 missing)
+     * - Row 2: Cols 1..8 (8 squares)
+     * - Row 3: Cols 1..8 (8 squares)
+     * - Row 4 (Bottom): Cols 2..6 (5 squares; cols 1, 7, 8 missing)
+     * Total: 5 + 8 + 8 + 5 = 26 squares.
      */
     public static function isValidSquare(int $r, int $c): bool
     {
         if ($r < 1 || $r > self::ROWS || $c < 1 || $c > self::COLS) {
             return false;
         }
-        if ($r === 1 && $c > 5) {
+        if ($r === 1 && ($c < 3 || $c > 7)) {
             return false;
         }
-        if ($r === 4 && $c < 4) {
+        if ($r === 4 && ($c < 2 || $c > 6)) {
             return false;
         }
         return true;
@@ -91,17 +95,17 @@ class Game extends \Bga\GameFramework\Table
 
     /**
      * Check if a move or push step from (r, c) in direction (dr, dc) crosses a side rail.
-     * - Top Side Rail: along top of Row 1, Cols 1 to 5.
-     * - Bottom Side Rail: along bottom of Row 4, Cols 4 to 8.
+     * - Top Side Rail: along top of Row 1, Cols 3 to 7.
+     * - Bottom Side Rail: along bottom of Row 4, Cols 2 to 6.
      */
     public static function crossesSideRail(int $r, int $c, int $dr, int $dc): bool
     {
-        // Pushing/moving up off top of Row 1, Cols 1..5 is blocked by rail
-        if ($r === 1 && $dr === -1 && $c >= 1 && $c <= 5) {
+        // Pushing/moving up off top of Row 1, Cols 3..7 is blocked by top rail
+        if ($r === 1 && $dr === -1 && $c >= 3 && $c <= 7) {
             return true;
         }
-        // Pushing/moving down off bottom of Row 4, Cols 4..8 is blocked by rail
-        if ($r === 4 && $dr === 1 && $c >= 4 && $c <= 8) {
+        // Pushing/moving down off bottom of Row 4, Cols 2..6 is blocked by bottom rail
+        if ($r === 4 && $dr === 1 && $c >= 2 && $c <= 6) {
             return true;
         }
         return false;
@@ -368,7 +372,7 @@ class Game extends \Bga\GameFramework\Table
         $result = [];
 
         $result['players'] = $this->getCollectionFromDb(
-            "SELECT `player_id` AS `id`, `player_score` AS `score`, `player_color`, `player_name` FROM `player`"
+            "SELECT `player_id` AS `id`, `player_score` AS `score`, `player_color` AS `color`, `player_color`, `player_name` FROM `player`"
         );
 
         $result['pieces'] = $this->getAllPieces();

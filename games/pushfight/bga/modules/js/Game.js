@@ -159,16 +159,16 @@ export class Game {
         gameArea.innerHTML = `
             <div id="pft_container" class="pft-container">
                 <div class="pft-board-wrapper">
-                    <!-- Top Side Rail (Row 1, Cols 1..5) -->
-                    <div class="pft-rail pft-rail-top" title="${_('Top Side Rail: Pieces cannot be pushed off here')}">
+                    <!-- Top Side Rail (Row 1, Cols 3..7) -->
+                    <div class="pft-rail pft-rail-top" title="${_('Top Side Rail: Pieces cannot be pushed off here (Cols 3-7)')}">
                         <span class="pft-rail-label">RAIL</span>
                     </div>
 
                     <!-- 26-Square Board Grid -->
                     <div id="pft_board" class="pft-board"></div>
 
-                    <!-- Bottom Side Rail (Row 4, Cols 4..8) -->
-                    <div class="pft-rail pft-rail-bottom" title="${_('Bottom Side Rail: Pieces cannot be pushed off here')}">
+                    <!-- Bottom Side Rail (Row 4, Cols 2..6) -->
+                    <div class="pft-rail pft-rail-bottom" title="${_('Bottom Side Rail: Pieces cannot be pushed off here (Cols 2-6)')}">
                         <span class="pft-rail-label">RAIL</span>
                     </div>
                 </div>
@@ -189,8 +189,8 @@ export class Game {
 
     isValidSquare(r, c) {
         if (r < 1 || r > this.ROWS || c < 1 || c > this.COLS) return false;
-        if (r === 1 && c > 5) return false; // Cutout top-right
-        if (r === 4 && c < 4) return false; // Cutout bottom-left
+        if (r === 1 && (c < 3 || c > 7)) return false; // Row 1 has cols 3..7
+        if (r === 4 && (c < 2 || c > 6)) return false; // Row 4 has cols 2..6
         return true;
     }
 
@@ -277,8 +277,19 @@ export class Game {
     }
 
     isWhitePlayer(playerId) {
-        const playerIds = Object.keys(this.gamedatas.players).map(Number);
-        return Number(playerId) === playerIds[0];
+        const player = this.gamedatas.players?.[playerId];
+        if (player) {
+            const color = (player.color || player.player_color || '').toLowerCase().replace('#', '');
+            // White / Ivory color starts with 'f' (e.g. 'f5eedc', 'ffffff') or is lighter
+            if (color === 'f5eedc' || color === 'ffffff' || color.startsWith('f') || color.startsWith('e')) {
+                return true;
+            }
+            if (color === '4a2c11' || color.startsWith('4') || color.startsWith('2') || color.startsWith('0')) {
+                return false;
+            }
+        }
+        // Fallback: check first player defined in player table or natural ID
+        return false;
     }
 
     isCurrentPlayerActive() {

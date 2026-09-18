@@ -1,0 +1,17 @@
+{
+  "100": {
+    "name": "Clan Bruce",
+    "values": {
+      "1": {
+        "name": "Included (Standard)",
+        "description": "Two Clan Bruce wildcard cards are included in the deck"
+      },
+      "2": {
+        "name": "Excluded (Introductory)",
+        "description": "Clan Bruce cards are removed, as recommended for beginners",
+        "tmdisplay": "No Clan Bruce"
+      }
+    },
+    "default": 1
+  }
+}

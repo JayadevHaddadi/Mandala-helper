@@ -1,0 +1,405 @@
+/**
+ * Lords of Scotland - CSS Stylesheet
+ * Scottish Highlands Medieval Theme
+ */
+
+:root {
+    --los-bg: #14171a;
+    --los-panel-bg: rgba(28, 33, 39, 0.95);
+    --los-gold: #d4af37;
+    --los-gold-bright: #ffd700;
+    --los-border: #3a4450;
+    --card-w: 112px;
+    --card-h: 164px;
+}
+
+#los-container {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #e6edf3;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.los-panel {
+    background: var(--los-panel-bg);
+    border: 1px solid var(--los-border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Header Status Bar */
+#los-header {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: linear-gradient(135deg, #1b263b 0%, #0d1b2a 100%);
+    border: 1px solid var(--los-gold);
+}
+
+.los-status-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.los-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+}
+
+.los-val {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+#los-round-val {
+    color: var(--los-gold-bright);
+}
+
+/* Titles */
+.los-section-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--los-gold);
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    padding-bottom: 4px;
+}
+
+.los-subtext {
+    font-size: 11px;
+    font-weight: normal;
+    text-transform: none;
+    color: #8b949e;
+}
+
+/* Card Rows */
+.los-cards-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: calc(var(--card-h) + 8px);
+    align-items: center;
+}
+
+.los-card-slot {
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.los-empty-slot {
+    width: 100%;
+    height: 100%;
+    border: 2px dashed #484f58;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #6e7681;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.los-empty-msg, .los-empty-army {
+    font-size: 13px;
+    font-style: italic;
+    color: #8b949e;
+    padding: 10px 0;
+}
+
+/* Player Armies */
+#los-armies-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.los-army-box {
+    background: #161b22;
+    border-left: 4px solid var(--los-gold);
+}
+
+.los-army-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #30363d;
+}
+
+.los-army-player-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+}
+
+.los-player-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid #ffffff;
+}
+
+.los-crown-badge {
+    background: #4a3700;
+    color: var(--los-gold-bright);
+    border: 1px solid var(--los-gold);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.los-army-score-info {
+    font-size: 13px;
+    display: flex;
+    gap: 16px;
+    color: #c9d1d9;
+}
+
+/* Card Styling */
+.los-card {
+    width: var(--card-w);
+    height: var(--card-h);
+    border-radius: 8px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px 8px;
+    position: relative;
+    cursor: default;
+    user-select: none;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    background-color: #21262d;
+    overflow: hidden;
+}
+
+/* Clan Palette Accents */
+.los-card.clan-makgill   { background: linear-gradient(145deg, #1b4332 0%, #081c15 100%); border-color: #40916c; }
+.los-card.clan-fergusson { background: linear-gradient(145deg, #1d3557 0%, #0b1d3a 100%); border-color: #457b9d; }
+.los-card.clan-wemyss    { background: linear-gradient(145deg, #6a040f 0%, #370617 100%); border-color: #9d0208; }
+.los-card.clan-scott     { background: linear-gradient(145deg, #3c096c 0%, #10002b 100%); border-color: #7b2cbf; }
+.los-card.clan-forsyth   { background: linear-gradient(145deg, #7f4f24 0%, #462b14 100%); border-color: #a68a64; }
+.los-card.clan-cockburn  { background: linear-gradient(145deg, #005f73 0%, #001219 100%); border-color: #0a9396; }
+.los-card.clan-cochrane  { background: linear-gradient(145deg, #9c6644 0%, #582f0e 100%); border-color: #b08968; }
+.los-card.clan-macdonnell{ background: linear-gradient(145deg, #343a40 0%, #1a1d20 100%); border-color: #6c757d; }
+.los-card.clan-bruce     { background: linear-gradient(145deg, #78590f 0%, #382800 100%); border-color: var(--los-gold-bright); }
+
+/* Card Face Elements */
+.los-card-corner-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.los-card-strength {
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.los-card-clan-name {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #e6edf3;
+    opacity: 0.9;
+}
+
+.los-card-crest {
+    text-align: center;
+    margin: 2px 0;
+}
+
+.los-crest-icon {
+    font-size: 26px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.los-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.los-card-power-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--los-gold-bright);
+    text-align: center;
+    line-height: 1.1;
+}
+
+.los-card-power-desc {
+    font-size: 9px;
+    line-height: 1.15;
+    color: #d0d7de;
+    text-align: center;
+    opacity: 0.85;
+}
+
+.los-card-corner-bottom {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.los-card-strength-small {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.7;
+}
+
+/* Card Badges */
+.los-power-status-badge {
+    position: absolute;
+    bottom: 2px;
+    left: 4px;
+    right: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    padding: 1px 0;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.los-power-status-badge.power-ready {
+    background: #238636;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(35, 134, 54, 0.8);
+}
+
+.los-power-status-badge.power-dormant {
+    background: rgba(0, 0, 0, 0.5);
+    color: #8b949e;
+}
+
+.los-copied-badge, .los-persisted-badge {
+    font-size: 8px;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--los-gold-bright);
+    border: 1px solid var(--los-gold);
+    border-radius: 3px;
+    padding: 1px 3px;
+    text-align: center;
+    margin-top: 2px;
+}
+
+/* Face Down Card Back */
+.los-card-back {
+    background: repeating-linear-gradient(
+        45deg,
+        #1e293b,
+        #1e293b 10px,
+        #0f172a 10px,
+        #0f172a 20px
+    );
+    border: 2px solid var(--los-gold);
+    align-items: center;
+    justify-content: center;
+}
+
+.los-card-back-pattern {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.los-back-shield {
+    font-size: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+}
+
+.los-back-text {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--los-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+/* Interactive Highlights & Actions */
+.los-card.highlight-action {
+    cursor: pointer;
+    box-shadow: 0 0 0 2px var(--los-gold-bright), 0 4px 12px rgba(255, 215, 0, 0.4);
+    animation: pulse-gold 1.8s infinite;
+}
+
+.los-card.highlight-action:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 0 0 3px var(--los-gold-bright), 0 8px 20px rgba(255, 215, 0, 0.6);
+}
+
+.los-card.highlight-target {
+    cursor: pointer;
+    box-shadow: 0 0 0 2px #f72585, 0 4px 12px rgba(247, 37, 133, 0.5);
+    animation: pulse-target 1.5s infinite;
+}
+
+.los-card.highlight-target:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 0 0 3px #f72585, 0 8px 20px rgba(247, 37, 133, 0.8);
+}
+
+.los-card.selected {
+    box-shadow: 0 0 0 3px var(--los-gold-bright), 0 10px 24px rgba(0, 0, 0, 0.8) !important;
+    transform: translateY(-8px) scale(1.05) !important;
+}
+
+/* Animations */
+@keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 0 2px var(--los-gold-bright), 0 4px 12px rgba(255, 215, 0, 0.3); }
+    50% { box-shadow: 0 0 0 3px var(--los-gold-bright), 0 6px 18px rgba(255, 215, 0, 0.7); }
+}
+
+@keyframes pulse-target {
+    0%, 100% { box-shadow: 0 0 0 2px #f72585, 0 4px 12px rgba(247, 37, 133, 0.4); }
+    50% { box-shadow: 0 0 0 3px #f72585, 0 6px 18px rgba(247, 37, 133, 0.8); }
+}
+
+.power-burst-animation {
+    animation: burst-glow 1.2s ease-out;
+}
+
+@keyframes burst-glow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.8); }
+    70% { box-shadow: 0 0 25px 8px rgba(255, 215, 0, 0); }
+    100% { box-shadow: none; }
+}
+
+
+
+
+

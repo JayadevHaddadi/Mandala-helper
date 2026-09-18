@@ -1,0 +1,39 @@
+{    
+    // Statistics for the table
+    "table": {
+      "skirmishes_number": {
+        "id": 10,
+        "name": "Number of skirmishes",
+        "type": "int"
+      }
+    },
+    
+    // Statistics for each player
+    "player": {
+      "skirmishes_won": {
+        "id": 10,
+        "name": "Skirmishes won",
+        "type": "int"
+      },
+      "supporters_claimed": {
+        "id": 11,
+        "name": "Supporters claimed",
+        "type": "int"
+      },
+      "bloodlines_doubled": {
+        "id": 12,
+        "name": "Bloodlines doubled",
+        "type": "int"
+      },
+      "highest_army_strength": {
+        "id": 13,
+        "name": "Highest army strength",
+        "type": "int"
+      },
+      "powers_activated": {
+        "id": 14,
+        "name": "Clan powers activated",
+        "type": "int"
+      }
+    }
+}
