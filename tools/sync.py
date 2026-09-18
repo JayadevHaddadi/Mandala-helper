@@ -83,6 +83,20 @@ def sync_directory(sftp, local_dir, remote_dir, dry_run=False):
         except IOError:
             pass
 
+    # Automatically prune deprecated legacy BGA files from remote SFTP if deleted locally
+    deprecated_files = {"gameoptions.inc.php", "stats.inc.php"}
+    for rem_name in list(remote_attrs.keys()):
+        if rem_name in deprecated_files and not os.path.exists(os.path.join(local_dir, rem_name)):
+            rem_path = posixpath.join(remote_dir, rem_name)
+            action = "[DRY-RUN PRUNE]" if dry_run else "[PRUNE]"
+            print(f"{action} Removing deprecated file: {rem_path}", flush=True)
+            if not dry_run and sftp:
+                try:
+                    sftp.remove(rem_path)
+                except Exception as e:
+                    print(f"Warning: Could not remove remote {rem_path}: {e}", flush=True)
+            del remote_attrs[rem_name]
+
     ignore_set = {".git", ".vscode", ".gitignore", "node_modules", "sftp.json", "sftp.config.json", ".DS_Store", "__pycache__"}
 
     for item in sorted(os.listdir(local_dir)):
