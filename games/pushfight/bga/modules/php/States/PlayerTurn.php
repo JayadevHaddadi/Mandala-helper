@@ -123,8 +123,19 @@ class PlayerTurn extends GameState
         $movesMade = (int) $this->globals->get('moves_made_this_turn', 0) + 1;
         $this->globals->set('moves_made_this_turn', $movesMade);
 
+        if ($movesRemaining <= 0) {
+            $this->globals->set('turn_phase', 'push');
+
+            // Check if player has any legal push available
+            if (!$this->game->playerHasAnyLegalPush($activePlayerId)) {
+                return $this->handleTrappedPlayer($activePlayerId);
+            }
+        }
+
         $playerName = $this->game->getPlayerNameById($activePlayerId);
         $pieceTypeName = ($piece['piece_type'] === 'king') ? clienttranslate('King') : clienttranslate('Pawn');
+
+        $turnArgs = $this->argPlayerTurn();
 
         $this->notify->all('pieceMoved', clienttranslate('${player_name} slides a ${piece_type} to (${target_r}, ${target_c})'), [
             'player_id' => $activePlayerId,
@@ -138,18 +149,10 @@ class PlayerTurn extends GameState
             'target_r' => $target_r,
             'target_c' => $target_c,
             'moves_remaining' => $movesRemaining,
+            'turn_args' => $turnArgs,
         ]);
 
         $this->playerStats->inc('moves_number', 1, $activePlayerId);
-
-        if ($movesRemaining <= 0) {
-            $this->globals->set('turn_phase', 'push');
-
-            // Check if player has any legal push available
-            if (!$this->game->playerHasAnyLegalPush($activePlayerId)) {
-                return $this->handleTrappedPlayer($activePlayerId);
-            }
-        }
 
         return PlayerTurn::class;
     }
@@ -168,17 +171,20 @@ class PlayerTurn extends GameState
         $this->globals->set('moves_remaining', 0);
         $this->globals->set('turn_phase', 'push');
 
+        if (!$this->game->playerHasAnyLegalPush($activePlayerId)) {
+            return $this->handleTrappedPlayer($activePlayerId);
+        }
+
         $playerName = $this->game->getPlayerNameById($activePlayerId);
+        $turnArgs = $this->argPlayerTurn();
+
         $this->notify->all('phaseChanged', clienttranslate('${player_name} finishes movement and prepares for mandatory push'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'phase' => 'push',
             'moves_remaining' => 0,
+            'turn_args' => $turnArgs,
         ]);
-
-        if (!$this->game->playerHasAnyLegalPush($activePlayerId)) {
-            return $this->handleTrappedPlayer($activePlayerId);
-        }
 
         return PlayerTurn::class;
     }
@@ -227,6 +233,7 @@ class PlayerTurn extends GameState
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
         $restoredPieces = $this->game->getAllPieces();
+        $turnArgs = $this->argPlayerTurn();
 
         $this->notify->all('turnUndone', clienttranslate('${player_name} undid moves and restarted turn'), [
             'player_id' => $activePlayerId,
@@ -234,6 +241,7 @@ class PlayerTurn extends GameState
             'pieces' => $restoredPieces,
             'moves_remaining' => 2,
             'turn_phase' => 'move',
+            'turn_args' => $turnArgs,
         ]);
 
         return PlayerTurn::class;

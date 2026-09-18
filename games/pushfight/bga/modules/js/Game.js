@@ -107,6 +107,7 @@ class SetupPlacement {
     onLeavingState(args, isCurrentPlayerActive) {
         this.game.currentSetupArgs = null;
         this.game.clearHighlights();
+        this.game.clearActionButtons();
     }
 }
 
@@ -123,39 +124,48 @@ class PlayerTurn {
         this.game.selectedPieceId = null;
         this.game.clearHighlights();
 
-        const phase = args.phase || 'move';
-        const movesRemaining = args.moves_remaining ?? 2;
+        this.updateTurnControls(args, isCurrentPlayerActive);
+        this.game.updateBoardInteractions(isCurrentPlayerActive);
+    }
 
-        if (isCurrentPlayerActive) {
-            if (phase === 'move' && movesRemaining > 0) {
-                this.bga.statusBar.setTitle(_('${you} may move up to ${moves} piece(s), or Skip to Push').replace('${moves}', movesRemaining));
-                if (args.can_skip_move) {
-                    this.bga.statusBar.addActionButton(_('Skip to Mandatory Push'), () => {
-                        this.bga.actions.performAction('actSkipToPush');
-                    }, { color: 'secondary' });
-                }
-            } else {
-                this.bga.statusBar.setTitle(_('${you} must execute a mandatory push with a square King!'));
-            }
+    updateTurnControls(args, isCurrentPlayerActive) {
+        this.game.clearActionButtons();
 
-            if (args.can_undo) {
-                this.bga.statusBar.addActionButton(_('↺ Undo Moves / Restart Turn'), () => {
-                    this.bga.actions.performAction('actUndo');
-                }, { color: 'secondary' });
-            }
-        } else {
+        const active = (isCurrentPlayerActive !== undefined) ? isCurrentPlayerActive : this.game.isCurrentPlayerActive();
+        if (!active) {
+            const phase = args?.phase || 'move';
             if (phase === 'move') {
                 this.bga.statusBar.setTitle(_('${actplayer} is planning their moves...'));
             } else {
                 this.bga.statusBar.setTitle(_('${actplayer} is executing a mandatory push...'));
             }
+            return;
         }
 
-        this.game.updateBoardInteractions(isCurrentPlayerActive);
+        const phase = args?.phase || 'move';
+        const movesRemaining = args?.moves_remaining ?? 2;
+
+        if (phase === 'move' && movesRemaining > 0) {
+            this.bga.statusBar.setTitle(_('${you} may move up to ${moves} piece(s), or Skip to Push').replace('${moves}', movesRemaining));
+            if (args?.can_skip_move !== false) {
+                this.bga.statusBar.addActionButton(_('Skip to Mandatory Push'), () => {
+                    this.bga.actions.performAction('actSkipToPush');
+                }, { color: 'secondary' });
+            }
+        } else {
+            this.bga.statusBar.setTitle(_('${you} must execute a mandatory push with a square King!'));
+        }
+
+        if (args?.can_undo) {
+            this.bga.statusBar.addActionButton(_('↺ Undo Moves / Restart Turn'), () => {
+                this.bga.actions.performAction('actUndo');
+            }, { color: 'secondary' });
+        }
     }
 
     onLeavingState(args, isCurrentPlayerActive) {
         this.game.clearHighlights();
+        this.game.clearActionButtons();
         this.game.selectedPieceId = null;
     }
 }
@@ -322,6 +332,12 @@ export class Game {
     }
 
     isCurrentPlayerActive() {
+        if (this.bga && typeof this.bga.isCurrentPlayerActive === 'function') {
+            return this.bga.isCurrentPlayerActive();
+        }
+        if (this.bga?.states && typeof this.bga.states.isCurrentPlayerActive === 'function') {
+            return this.bga.states.isCurrentPlayerActive();
+        }
         if (this.bga?.players && typeof this.bga.players.isCurrentPlayerActive === 'function') {
             return this.bga.players.isCurrentPlayerActive();
         }
@@ -471,6 +487,13 @@ export class Game {
 
         if (!this.isCurrentPlayerActive() || !this.currentArgs) return;
 
+        if (this.selectedPieceId === pieceId) {
+            this.clearHighlights();
+            this.selectedPieceId = null;
+            this.updateBoardInteractions(true);
+            return;
+        }
+
         const phase = this.currentArgs.phase || 'move';
         const movesRemaining = this.currentArgs.moves_remaining ?? 2;
 
@@ -565,9 +588,9 @@ export class Game {
         document.querySelectorAll('.pft-valid-move').forEach(el => el.classList.remove('pft-valid-move'));
         document.querySelectorAll('.pft-valid-setup-cell').forEach(el => el.classList.remove('pft-valid-setup-cell'));
         document.querySelectorAll('.pft-piece.selected').forEach(el => el.classList.remove('selected'));
+        document.querySelectorAll('.pft-piece.selectable').forEach(el => el.classList.remove('selectable'));
         document.querySelectorAll('.pft-piece.setup-removable').forEach(el => el.classList.remove('setup-removable'));
         document.querySelectorAll('.pft-push-arrow').forEach(el => el.remove());
-        this.clearActionButtons();
     }
 
     setupNotifications() {
@@ -700,6 +723,7 @@ export class Game {
     async notif_setupFinished(notif) {
         this.currentSetupArgs = null;
         this.clearHighlights();
+        this.clearActionButtons();
     }
 
     async notif_pieceMoved(notif) {
@@ -718,8 +742,29 @@ export class Game {
             p.pos_y = args.to_r;
         }
 
+        if (args.turn_args) {
+            this.currentArgs = args.turn_args;
+            this.gamedatas.turn_phase = args.turn_args.phase;
+        } else if (this.currentArgs) {
+            this.currentArgs.moves_remaining = args.moves_remaining;
+            this.currentArgs.can_undo = true;
+            if (args.moves_remaining <= 0) {
+                this.currentArgs.phase = 'push';
+                this.currentArgs.can_skip_move = false;
+            }
+        }
+
+        const phasePill = document.getElementById('pft_phase_pill');
+        if (phasePill && this.currentArgs?.phase) {
+            phasePill.textContent = `Phase: ${this.currentArgs.phase.toUpperCase()}`;
+        }
+
         this.clearHighlights();
         this.selectedPieceId = null;
+
+        const isActive = this.isCurrentPlayerActive();
+        this.playerTurn.updateTurnControls(this.currentArgs, isActive);
+        this.updateBoardInteractions(isActive);
     }
 
     async notif_phaseChanged(notif) {
@@ -729,8 +774,22 @@ export class Game {
         if (phasePill) {
             phasePill.textContent = `Phase: ${args.phase.toUpperCase()}`;
         }
+
+        if (args.turn_args) {
+            this.currentArgs = args.turn_args;
+        } else if (this.currentArgs) {
+            this.currentArgs.phase = args.phase;
+            this.currentArgs.moves_remaining = 0;
+            this.currentArgs.can_skip_move = false;
+            this.currentArgs.can_undo = true;
+        }
+
         this.clearHighlights();
         this.selectedPieceId = null;
+
+        const isActive = this.isCurrentPlayerActive();
+        this.playerTurn.updateTurnControls(this.currentArgs, isActive);
+        this.updateBoardInteractions(isActive);
     }
 
     async notif_pushExecuted(notif) {
@@ -769,6 +828,7 @@ export class Game {
         }
 
         this.clearHighlights();
+        this.clearActionButtons();
         this.selectedPieceId = null;
     }
 
@@ -785,24 +845,38 @@ export class Game {
         if (phasePill) phasePill.textContent = `Phase: ${args.turn_phase.toUpperCase()}`;
 
         this.clearHighlights();
+        this.clearActionButtons();
         this.selectedPieceId = null;
     }
 
     async notif_turnUndone(notif) {
         sounds.playSlide();
         const args = this._getNotifArgs(notif);
-        this.gamedatas.turn_phase = args.turn_phase;
+        this.gamedatas.turn_phase = args.turn_phase || 'move';
         this.gamedatas.pieces = args.pieces;
 
         const phasePill = document.getElementById('pft_phase_pill');
         if (phasePill) {
-            phasePill.textContent = `Phase: ${args.turn_phase.toUpperCase()}`;
+            phasePill.textContent = `Phase: ${(args.turn_phase || 'move').toUpperCase()}`;
+        }
+
+        if (args.turn_args) {
+            this.currentArgs = args.turn_args;
+        } else if (this.currentArgs) {
+            this.currentArgs.phase = 'move';
+            this.currentArgs.moves_remaining = 2;
+            this.currentArgs.can_undo = false;
+            this.currentArgs.can_skip_move = true;
         }
 
         // Re-render pieces into restored positions
         this.renderPieces();
         this.clearHighlights();
         this.selectedPieceId = null;
+
+        const isActive = this.isCurrentPlayerActive();
+        this.playerTurn.updateTurnControls(this.currentArgs, isActive);
+        this.updateBoardInteractions(isActive);
     }
 
     async notif_gameWon(notif) {
