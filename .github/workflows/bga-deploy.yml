@@ -1,0 +1,93 @@
+name: BGA Studio Deployer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'games/**'
+      - 'tools/**'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Game target to deploy'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - pushfight
+          - lordsofscotlandtest
+          - lordsofscotland
+          - mandala
+          - mandalatest
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install paramiko
+
+      - name: Deploy to BGA Studio
+        env:
+          BGA_SFTP_HOST: "1.studio.boardgamearena.com"
+          BGA_SFTP_PORT: "2022"
+          BGA_SFTP_USERNAME: ${{ secrets.BGA_SFTP_USERNAME || 'JayadevHaddadi' }}
+          BGA_SFTP_PASSWORD: ${{ secrets.BGA_SFTP_PASSWORD }}
+        run: |
+          if [ -z "$BGA_SFTP_PASSWORD" ]; then
+            echo "::error::Secret BGA_SFTP_PASSWORD is not set in GitHub repository settings!"
+            echo "Please go to Settings -> Secrets and variables -> Actions and add BGA_SFTP_PASSWORD."
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            CHOICE="${{ github.event.inputs.target }}"
+            if [ "$CHOICE" = "all" ]; then
+              python tools/sync.py pushfight
+              python tools/sync.py lordsofscotlandtest
+            else
+              python tools/sync.py "$CHOICE"
+            fi
+          else
+            # Triggered by push to main: detect which game changed
+            CHANGED=$(git diff --name-only HEAD~1 HEAD || echo "all")
+            echo "Changed files:"
+            echo "$CHANGED"
+
+            DEPLOYED=0
+            if echo "$CHANGED" | grep -q "games/pushfight"; then
+              echo "Deploying Push Fight..."
+              python tools/sync.py pushfight
+              DEPLOYED=1
+            fi
+
+            if echo "$CHANGED" | grep -q "games/lordsofscotland"; then
+              echo "Deploying Lords of Scotland..."
+              python tools/sync.py lordsofscotlandtest
+              DEPLOYED=1
+            fi
+
+            if echo "$CHANGED" | grep -q "games/mandala"; then
+              echo "Deploying Mandala..."
+              python tools/sync.py mandala
+              DEPLOYED=1
+            fi
+
+            if [ "$DEPLOYED" -eq 0 ]; then
+              echo "No specific game folder modified. Deploying pushfight and lordsofscotlandtest..."
+              python tools/sync.py pushfight
+              python tools/sync.py lordsofscotlandtest
+            fi
+          fi

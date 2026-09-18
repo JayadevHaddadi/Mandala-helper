@@ -33,6 +33,13 @@ TARGET_MAP = {
 }
 
 def load_credentials():
+    if os.environ.get("BGA_SFTP_PASSWORD"):
+        return {
+            "host": os.environ.get("BGA_SFTP_HOST", "1.studio.boardgamearena.com"),
+            "port": int(os.environ.get("BGA_SFTP_PORT", 2022)),
+            "username": os.environ.get("BGA_SFTP_USERNAME", "JayadevHaddadi"),
+            "password": os.environ["BGA_SFTP_PASSWORD"],
+        }
     config_paths = [
         os.path.join(ROOT_DIR, "tools", "sftp.config.json"),
         os.path.join(ROOT_DIR, "games", "mandala", "bga-prod", "sftp.json"),
