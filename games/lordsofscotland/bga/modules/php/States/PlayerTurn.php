@@ -83,6 +83,10 @@ class PlayerTurn extends GameState
         $refillCard = $this->game->drawCardFromDeck('recruit', $slot, $wasFaceUp);
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
+
+        // Precompute power readiness so recipient immediately sees power state in hand
+        $card['can_activate_power'] = $this->game->canActivatePower((int)$card['strength'], $card['clan']);
+
         $this->game->notifyAllPlayers("cardRecruited", clienttranslate('${player_name} recruits a clan card from slot ${slot_display}'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
@@ -90,7 +94,7 @@ class PlayerTurn extends GameState
             'slot_display' => $slot + 1,
             'card_id' => $card_id,
             'was_face_up' => $wasFaceUp,
-            'card' => $wasFaceUp ? $card : ['card_id' => $card_id, 'clan' => 'hidden', 'strength' => 0],
+            'card' => $card,
             'refill_card' => $refillCard && $wasFaceUp ? $refillCard : ($refillCard ? ['card_id' => $refillCard['card_id'], 'clan' => 'hidden', 'strength' => 0, 'slot' => $slot, 'is_face_up' => 0] : null),
         ]);
 

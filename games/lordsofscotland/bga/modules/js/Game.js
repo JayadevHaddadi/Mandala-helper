@@ -184,6 +184,12 @@ export class Game {
         return false;
     }
 
+    // Safe player ID comparison: PHP sends ints, BGA stores strings — never use ===
+    isCurrentPlayer(playerId) {
+        if (!playerId || !this.bga?.player_id) return false;
+        return parseInt(playerId, 10) === parseInt(this.bga.player_id, 10);
+    }
+
     setup(gamedatas) {
         this.gamedatas = gamedatas;
 
@@ -650,9 +656,16 @@ export class Game {
             }
         }
         // If current player recruited, add card to hand
-        if (player_id === this.bga.player_id) {
+        // NOTE: Use isCurrentPlayer() — PHP sends player_id as int, BGA stores it as string.
+        if (this.isCurrentPlayer(player_id)) {
             const handContainer = document.getElementById('los-hand-cards');
             if (handContainer && card) {
+                // Remove any duplicate (e.g. optimistic insert) before appending
+                const existing = document.getElementById(`card-${card.card_id}`);
+                if (existing) existing.remove();
+                // Remove empty-hand placeholder if present
+                const emptyMsg = handContainer.querySelector('.los-empty-msg');
+                if (emptyMsg) emptyMsg.remove();
                 handContainer.appendChild(this.createCardElement(card, 'hand'));
             }
             const countEl = document.getElementById('los-hand-count');
@@ -666,8 +679,9 @@ export class Game {
         const args = this._getNotifArgs(notif);
         const { player_id, card_id, clan, strength, is_face_up } = args;
         // Remove from current player's hand if it's them
+        // NOTE: Use isCurrentPlayer() — PHP sends player_id as int, BGA stores it as string.
         const handCardEl = document.getElementById(`card-${card_id}`);
-        if (handCardEl && player_id === this.bga.player_id) {
+        if (handCardEl && this.isCurrentPlayer(player_id)) {
             handCardEl.remove();
             const countEl = document.getElementById('los-hand-count');
             const handContainer = document.getElementById('los-hand-cards');
@@ -680,6 +694,10 @@ export class Game {
         if (armyRow) {
             const emptyMsg = armyRow.querySelector('.los-empty-army');
             if (emptyMsg) emptyMsg.remove();
+
+            // Remove duplicate if already there
+            const existingInArmy = armyRow.querySelector(`[data-card-id="${card_id}"]`);
+            if (existingInArmy) existingInArmy.remove();
 
             const cardData = {
                 card_id,
