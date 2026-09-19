@@ -117,7 +117,12 @@ class Game extends \Bga\GameFramework\Table
 
         $result['current_skirmish'] = (int) $this->globals->get('current_skirmish', 1);
         $result['current_round'] = (int) $this->globals->get('current_round', 1);
-        $result['victor_initiative'] = (int) $this->globals->get('victor_initiative', 0);
+        $vi = (int) $this->globals->get('victor_initiative', 0);
+        if ($vi <= 0 && !empty($result['players'])) {
+            $vi = (int) array_key_first($result['players']);
+            $this->globals->set('victor_initiative', $vi);
+        }
+        $result['victor_initiative'] = $vi;
         $result['clans'] = self::CLANS;
 
         // Recruit row
@@ -220,8 +225,8 @@ class Game extends \Bga\GameFramework\Table
         $this->reattributeColorsBasedOnPreferences($players, $gameinfos["player_colors"]);
         $this->reloadPlayersBasicInfos();
 
-        // 1. Build Deck
-        $includeBruce = (int) ($options[100] ?? 1) === 1;
+        // 1. Build Deck (Option 100: 1 = Excluded (default for beginners), 2 = Included (advanced))
+        $includeBruce = (int) ($options[100] ?? 1) === 2;
         $cardsToInsert = [];
 
         foreach (array_keys(self::CLANS) as $clan) {

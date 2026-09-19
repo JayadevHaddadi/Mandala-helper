@@ -168,6 +168,22 @@ export class Game {
         this.selectedHandCardId = null;
     }
 
+    isCurrentPlayerActive() {
+        if (this.bga && typeof this.bga.isCurrentPlayerActive === 'function') {
+            return this.bga.isCurrentPlayerActive();
+        }
+        if (this.bga?.states && typeof this.bga.states.isCurrentPlayerActive === 'function') {
+            return this.bga.states.isCurrentPlayerActive();
+        }
+        if (this.bga?.players && typeof this.bga.players.isCurrentPlayerActive === 'function') {
+            return this.bga.players.isCurrentPlayerActive();
+        }
+        if (typeof gameui !== 'undefined' && typeof gameui.isCurrentPlayerActive === 'function') {
+            return gameui.isCurrentPlayerActive();
+        }
+        return false;
+    }
+
     setup(gamedatas) {
         this.gamedatas = gamedatas;
 
@@ -209,10 +225,7 @@ export class Game {
                     <div id="los-supporter-row" class="los-cards-row"></div>
                 </div>
 
-                <!-- Player Army Lines -->
-                <div id="los-armies-container"></div>
-
-                <!-- Current Player Hand Area -->
+                <!-- Current Player Hand Area (Positioned above Mustered Armies) -->
                 <div id="los-hand-container" class="los-panel">
                     <div class="los-section-title">
                         <span>Your Hand</span>
@@ -220,25 +233,48 @@ export class Game {
                     </div>
                     <div id="los-hand-cards" class="los-cards-row"></div>
                 </div>
+
+                <!-- Player Army Lines -->
+                <div id="los-armies-container"></div>
             </div>
         `;
 
-        this.updateVictorInitiativeBadge();
         this.renderRecruitRow(gamedatas.recruit);
         this.renderSupporterRow(gamedatas.supporters);
-        this.renderArmies(gamedatas.armies);
         this.renderHand(gamedatas.hand);
+        this.renderArmies(gamedatas.armies);
+        this.updateVictorInitiativeBadge();
 
         this.setupNotifications();
     }
 
     updateVictorInitiativeBadge() {
-        const viPlayerId = this.gamedatas.victor_initiative;
-        const viPlayer = this.gamedatas.players[viPlayerId];
+        const viPlayerId = parseInt(this.gamedatas?.victor_initiative, 10);
+        const viPlayer = this.gamedatas?.players?.[viPlayerId];
         const el = document.getElementById('los-vi-val');
         if (el && viPlayer) {
             el.innerHTML = `<span style="color: #${viPlayer.color}; font-weight: bold;">👑 ${viPlayer.name}</span>`;
         }
+
+        // Synchronize crown badge on player army headers
+        document.querySelectorAll('.los-army-box').forEach(box => {
+            const boxPlayerId = parseInt(box.dataset.playerId, 10);
+            const titleEl = box.querySelector('.los-army-player-title');
+            if (!titleEl) return;
+
+            const existingBadge = titleEl.querySelector('.los-crown-badge');
+            if (existingBadge) {
+                existingBadge.remove();
+            }
+
+            if (viPlayerId && boxPlayerId === viPlayerId) {
+                const badge = document.createElement('span');
+                badge.className = 'los-crown-badge';
+                badge.title = _('Victor’s Initiative');
+                badge.textContent = '👑 Initiative';
+                titleEl.appendChild(badge);
+            }
+        });
     }
 
     renderRecruitRow(recruitCards) {
@@ -283,21 +319,45 @@ export class Game {
         if (!container) return;
         container.innerHTML = '';
 
-        Object.values(this.gamedatas.players).forEach(player => {
-            const pId = parseInt(player.id);
-            const playerArmy = armies[pId] || [];
+        const myId = parseInt(this.bga?.player_id, 10);
+        const viPlayerId = parseInt(this.gamedatas?.victor_initiative, 10);
+
+        // Sort so current player's army is rendered FIRST (directly under Your Hand)
+        const playersList = Object.entries(this.gamedatas.players || {}).map(([key, p]) => {
+            return {
+                id: parseInt(p.id || p.player_id || key, 10),
+                name: p.name || p.player_name || '',
+                color: p.color || p.player_color || 'ffffff',
+                score: p.score ?? p.player_score ?? 0,
+                player_no: parseInt(p.player_no || p.no || 0, 10)
+            };
+        }).sort((a, b) => {
+            if (a.id === myId) return -1;
+            if (b.id === myId) return 1;
+            return a.player_no - b.player_no;
+        });
+
+        playersList.forEach(player => {
+            const pId = player.id;
+            const playerArmy = (armies && armies[pId]) ? armies[pId] : [];
 
             const armyBox = document.createElement('div');
             armyBox.id = `player-army-box-${pId}`;
+            armyBox.dataset.playerId = pId;
             armyBox.className = 'los-panel los-army-box';
+            if (pId === myId) {
+                armyBox.classList.add('los-my-army');
+            }
 
-            const isVI = (pId === parseInt(this.gamedatas.victor_initiative));
+            const isVI = Boolean(viPlayerId && pId === viPlayerId);
+            const isMe = (pId === myId);
 
             armyBox.innerHTML = `
                 <div class="los-army-header">
                     <div class="los-army-player-title">
                         <span class="los-player-dot" style="background-color: #${player.color};"></span>
                         <strong style="color: #${player.color};">${player.name}</strong>
+                        ${isMe ? '<span class="los-you-badge">(You)</span>' : ''}
                         ${isVI ? '<span class="los-crown-badge" title="Victor’s Initiative">👑 Initiative</span>' : ''}
                     </div>
                     <div class="los-army-score-info">
@@ -414,10 +474,17 @@ export class Game {
     }
 
     onHandCardClick(card) {
-        if (!this.bga.states.isCurrentPlayerActive()) return;
+        if (!this.isCurrentPlayerActive()) return;
 
         // Toggle selection
-        document.querySelectorAll('.los-card.selected').forEach(c => c.classList.remove('selected'));
+        if (this.selectedHandCardId === card.card_id) {
+            this.selectedHandCardId = null;
+            document.querySelectorAll('#los-hand-cards .los-card.selected').forEach(c => c.classList.remove('selected'));
+            this.clearActionButtons();
+            return;
+        }
+
+        document.querySelectorAll('#los-hand-cards .los-card.selected').forEach(c => c.classList.remove('selected'));
         const cardEl = document.getElementById(`card-${card.card_id}`);
         if (cardEl) cardEl.classList.add('selected');
 
@@ -460,7 +527,8 @@ export class Game {
             if (canRecruit) {
                 el.classList.add('highlight-action');
                 el.onclick = () => {
-                    const cardId = parseInt(el.dataset.cardId);
+                    if (!this.isCurrentPlayerActive()) return;
+                    const cardId = parseInt(el.dataset.cardId, 10);
                     this.bga.actions.performAction('actRecruit', { card_id: cardId });
                 };
             } else {
