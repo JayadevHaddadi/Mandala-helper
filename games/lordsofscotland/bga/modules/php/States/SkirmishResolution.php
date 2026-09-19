@@ -39,11 +39,11 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                 // Check highest army strength stat
                 $currentHighest = (int) Game::getUniqueValueFromDb("SELECT `highest_army_strength` FROM `player` WHERE `player_id` = $pIdInt");
                 if ($calc['total'] > $currentHighest) {
-                    $this->game->playerStats->set('highest_army_strength', $pIdInt, $calc['total']);
+                    $this->game->playerStats->set('highest_army_strength', $calc['total'], $pIdInt);
                 }
 
                 if ($calc['doubled']) {
-                    $this->game->playerStats->inc('bloodlines_doubled', $pIdInt, 1);
+                    $this->game->playerStats->inc('bloodlines_doubled', 1, $pIdInt);
                 }
 
                 // Check if player has Cochrane in their army (claim 2 supporters)
@@ -118,7 +118,7 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         $this->game->globals->set('victor_initiative', $winnerId);
 
         if ($winner) {
-            $this->game->playerStats->inc('skirmishes_won', $winnerId, 1);
+            $this->game->playerStats->inc('skirmishes_won', 1, $winnerId);
         }
         $this->game->tableStats->inc('skirmishes_number', 1);
 

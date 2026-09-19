@@ -55,7 +55,7 @@ class DraftSupporter extends GameState
         // Increase player score using framework counter
         $this->game->playerScore->inc($activePlayerId, $strength);
         $newScore = (int) $this->game->playerScore->get($activePlayerId);
-        $this->game->playerStats->inc('supporters_claimed', $activePlayerId, 1);
+        $this->game->playerStats->inc('supporters_claimed', 1, $activePlayerId);
 
         $this->game->notifyAllPlayers("supporterDrafted", clienttranslate('${player_name} claims ${clan_name} (${strength} pts) from the Supporter row (New total score: ${new_score})'), [
             'player_id' => $activePlayerId,

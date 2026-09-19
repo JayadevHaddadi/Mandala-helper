@@ -153,7 +153,7 @@ class PlayerTurn extends GameState
         }
 
         // Power Activated!
-        $this->game->playerStats->inc('powers_activated', $activePlayerId, 1);
+        $this->game->playerStats->inc('powers_activated', 1, $activePlayerId);
         $powerDesc = Game::CLANS[$clan]['power'];
 
         $this->game->notifyAllPlayers("powerActivated", clienttranslate('${player_name} musters ${clan_name} (${strength}) and activates its power: <strong>${power_desc}</strong>!'), [
