@@ -223,16 +223,16 @@
     z-index: 6;
 }
 
-/* Push Directional Arrows */
+/* Push Directional Arrows (≥ 32px click target for mobile compliance) */
 .pft-push-arrow {
     position: absolute;
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     background: #e65100;
     color: #ffffff;
     border: 2px solid #ffffff;
     border-radius: 50%;
-    font-size: 12px;
+    font-size: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -243,28 +243,28 @@
 }
 
 .pft-push-arrow:hover {
-    transform: scale(1.25);
+    transform: scale(1.2);
     background: #ff6d00;
 }
 
 .pft-arrow-up {
-    top: -32px;
-    left: calc(50% - 14px);
+    top: -38px;
+    left: calc(50% - 18px);
 }
 
 .pft-arrow-down {
-    bottom: -32px;
-    left: calc(50% - 14px);
+    bottom: -38px;
+    left: calc(50% - 18px);
 }
 
 .pft-arrow-left {
-    left: -32px;
-    top: calc(50% - 14px);
+    left: -38px;
+    top: calc(50% - 18px);
 }
 
 .pft-arrow-right {
-    right: -32px;
-    top: calc(50% - 14px);
+    right: -38px;
+    top: calc(50% - 18px);
 }
 
 /* Falling Off Edge Animation */
@@ -354,4 +354,27 @@
     box-shadow: 0 0 14px rgba(220, 50, 50, 0.85) !important;
     transform: scale(1.08);
 }
+
+/* Responsive scaling for mobile devices and small viewports */
+@media (max-width: 620px) {
+    .pft-board-wrapper {
+        transform: scale(0.85);
+        transform-origin: top center;
+    }
+}
+
+@media (max-width: 520px) {
+    .pft-board-wrapper {
+        transform: scale(0.70);
+        transform-origin: top center;
+    }
+}
+
+@media (max-width: 420px) {
+    .pft-board-wrapper {
+        transform: scale(0.56);
+        transform-origin: top center;
+    }
+}
+
 

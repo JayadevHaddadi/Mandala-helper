@@ -159,7 +159,7 @@ class PlayerTurn {
         if (args?.can_undo) {
             this.bga.statusBar.addActionButton(_('↺ Undo Moves / Restart Turn'), () => {
                 this.bga.actions.performAction('actUndo');
-            }, { color: 'secondary' });
+            }, { color: 'danger' });
         }
     }
 
@@ -221,6 +221,7 @@ export class Game {
         this.buildBoardGrid();
         this.renderPieces();
         this.setupNotifications();
+        this.setupTooltips();
     }
 
     isValidSquare(r, c) {
@@ -278,14 +279,19 @@ export class Game {
         } else {
             icon.innerHTML = `<span class="piece-symbol">●</span>`;
         }
-        pieceEl.appendChild(icon);
+        // Translatable piece tooltip
+        if (p.piece_type === 'king') {
+            this.addTooltip(pieceEl, _('Square King (${team}): Can slide like a rook and execute a push').replace('${team}', isWhite ? _('White') : _('Brown')));
+        } else {
+            this.addTooltip(pieceEl, _('Round Pawn (${team}): Can slide like a rook. Cannot execute pushes').replace('${team}', isWhite ? _('White') : _('Brown')));
+        }
 
         // Anchor badge
         if (parseInt(p.id, 10) === parseInt(anchoredId, 10)) {
             const anchorBadge = document.createElement('div');
             anchorBadge.className = 'pft-anchor-badge';
             anchorBadge.textContent = '⚓';
-            anchorBadge.title = _('Anchored piece: Locked and cannot be moved or pushed this turn');
+            this.addTooltip(anchorBadge, _('Anchor Ring (Red): Marks the piece pushed last turn. Cannot be pushed this turn.'));
             pieceEl.appendChild(anchorBadge);
         }
 
@@ -383,46 +389,61 @@ export class Game {
             );
         }
 
-        // Action buttons
-        this.bga.statusBar.addActionButton(
-            _('Square King (${rem} left)').replace('${rem}', kingsRem),
-            () => {
-                this.selectedSetupType = 'king';
-                this.updateSetupInteractions(this.currentSetupArgs, true);
-            },
-            { color: (this.selectedSetupType === 'king' && kingsRem > 0) ? 'primary' : 'secondary', disabled: (kingsRem <= 0) }
-        );
-
-        this.bga.statusBar.addActionButton(
-            _('Round Pawn (${rem} left)').replace('${rem}', pawnsRem),
-            () => {
-                this.selectedSetupType = 'pawn';
-                this.updateSetupInteractions(this.currentSetupArgs, true);
-            },
-            { color: (this.selectedSetupType === 'pawn' && pawnsRem > 0) ? 'primary' : 'secondary', disabled: (pawnsRem <= 0) }
-        );
-
-        this.bga.statusBar.addActionButton(
-            _('⚡ Standard Preset'),
-            () => this.bga.actions.performAction('actStandardPreset'),
-            { color: 'secondary' }
-        );
-
+        // Action buttons (Ensuring strictly ≤ 4 buttons at all times for BGA review standards)
         const totalPlaced = (args.kings_placed || 0) + (args.pawns_placed || 0);
-        if (totalPlaced > 0) {
+
+        if (kingsRem <= 0 && pawnsRem <= 0) {
+            // All 5 pieces placed: show confirmation and reset options only (3 buttons)
+            if (args.can_confirm) {
+                this.bga.statusBar.addActionButton(
+                    _('✓ Confirm Placement'),
+                    () => this.bga.actions.performAction('actConfirmPlacement'),
+                    { color: 'primary' }
+                );
+            }
             this.bga.statusBar.addActionButton(
                 _('Clear All'),
                 () => this.bga.actions.performAction('actClearAll'),
+                { color: 'danger' }
+            );
+            this.bga.statusBar.addActionButton(
+                _('⚡ Standard Preset'),
+                () => this.bga.actions.performAction('actStandardPreset'),
                 { color: 'secondary' }
             );
-        }
-
-        if (args.can_confirm) {
+        } else {
+            // Pieces still remaining to place (at most 4 buttons)
             this.bga.statusBar.addActionButton(
-                _('✓ Confirm Placement'),
-                () => this.bga.actions.performAction('actConfirmPlacement'),
-                { color: 'primary' }
+                _('Square King (${rem} left)').replace('${rem}', kingsRem),
+                () => {
+                    this.selectedSetupType = 'king';
+                    this.updateSetupInteractions(this.currentSetupArgs, true);
+                },
+                { color: (this.selectedSetupType === 'king' && kingsRem > 0) ? 'primary' : 'secondary', disabled: (kingsRem <= 0) }
             );
+
+            this.bga.statusBar.addActionButton(
+                _('Round Pawn (${rem} left)').replace('${rem}', pawnsRem),
+                () => {
+                    this.selectedSetupType = 'pawn';
+                    this.updateSetupInteractions(this.currentSetupArgs, true);
+                },
+                { color: (this.selectedSetupType === 'pawn' && pawnsRem > 0) ? 'primary' : 'secondary', disabled: (pawnsRem <= 0) }
+            );
+
+            this.bga.statusBar.addActionButton(
+                _('⚡ Standard Preset'),
+                () => this.bga.actions.performAction('actStandardPreset'),
+                { color: 'secondary' }
+            );
+
+            if (totalPlaced > 0) {
+                this.bga.statusBar.addActionButton(
+                    _('Clear All'),
+                    () => this.bga.actions.performAction('actClearAll'),
+                    { color: 'danger' }
+                );
+            }
         }
 
         // Highlight valid placement cells on player's half
@@ -882,10 +903,48 @@ export class Game {
     async notif_gameWon(notif) {
         sounds.playWin();
         const args = this._getNotifArgs(notif);
-        this.bga.gameArea.getElement().insertAdjacentHTML('afterbegin', `
-            <div class="pft-victory-banner">
-                <h2>🏆 ${args.winner_name} WINS!</h2>
-            </div>
-        `);
+        const banner = document.createElement('div');
+        banner.className = 'pft-victory-banner';
+        banner.innerHTML = `
+            <h2>🏆 ${args.winner_name || _('Winner')} WINS!</h2>
+            <p style="margin: 6px 0 0 0; font-size: 14px;">${_('Piece pushed off the board — Skirmish decided!')}</p>
+        `;
+        const container = document.getElementById('pft_container') || this.bga.gameArea.getElement();
+        if (container) {
+            container.prepend(banner);
+        }
+    }
+
+    addTooltip(target, text) {
+        if (!target || !text) return;
+        try {
+            if (this.bga?.tooltips && typeof this.bga.tooltips.addTooltipHtml === 'function') {
+                this.bga.tooltips.addTooltipHtml(target, text);
+            } else if (typeof gameui !== 'undefined' && typeof gameui.addTooltipHtml === 'function') {
+                const id = typeof target === 'string' ? target : target.id;
+                if (id) gameui.addTooltipHtml(id, text);
+            }
+        } catch (e) {}
+    }
+
+    setupTooltips() {
+        document.querySelectorAll('.pft-rail-top').forEach(el => {
+            this.addTooltip(el, _('Top Side Rail: Pieces cannot be pushed off the board across this rail.'));
+        });
+        document.querySelectorAll('.pft-rail-bottom').forEach(el => {
+            this.addTooltip(el, _('Bottom Side Rail: Pieces cannot be pushed off the board across this rail.'));
+        });
+        const anchorPill = document.getElementById('pft_anchor_pill');
+        if (anchorPill) {
+            this.addTooltip(anchorPill, _('Anchor Ring (Red): The piece that was pushed on the previous turn cannot be pushed on this turn.'));
+        }
+        const turnPill = document.getElementById('pft_turn_pill');
+        if (turnPill) {
+            this.addTooltip(turnPill, _('Turn counter: Tracks current turn number.'));
+        }
+        const phasePill = document.getElementById('pft_phase_pill');
+        if (phasePill) {
+            this.addTooltip(phasePill, _('Turn phase: You may move up to 2 pieces, followed by 1 mandatory push with a square King.'));
+        }
     }
 }
