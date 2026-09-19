@@ -36,8 +36,8 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                 $calc = $this->game->calculateArmyStrength((int)$pId);
                 $pIdInt = (int)$pId;
 
-                // Check highest army strength stat
-                $currentHighest = (int) Game::getUniqueValueFromDb("SELECT `highest_army_strength` FROM `player` WHERE `player_id` = $pIdInt");
+                // Check highest army strength stat (stored via PlayerStats, not a `player` table column)
+                $currentHighest = (int) $this->game->playerStats->get('highest_army_strength', $pIdInt);
                 if ($calc['total'] > $currentHighest) {
                     $this->game->playerStats->set('highest_army_strength', $calc['total'], $pIdInt);
                 }
