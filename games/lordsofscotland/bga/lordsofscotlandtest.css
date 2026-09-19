@@ -325,6 +325,38 @@
     margin-top: 2px;
 }
 
+/* Marks a card only its owner can see is actually played face-down */
+.los-hidden-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 8px;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.75);
+    color: #d0d7de;
+    border: 1px solid #6c757d;
+    border-radius: 3px;
+    padding: 1px 4px;
+    text-align: center;
+    z-index: 2;
+}
+
+/* Card-travel animation (hand <-> recruit row <-> army) */
+.los-card.los-card-flying {
+    z-index: 80;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
+}
+
+@keyframes card-pop-in {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.los-card.los-card-pop-in {
+    animation: card-pop-in 0.35s ease-out;
+}
+
 /* Face Down Card Back */
 .los-card-back {
     background: repeating-linear-gradient(

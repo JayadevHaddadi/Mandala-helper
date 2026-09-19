@@ -431,8 +431,11 @@ export class Game {
         const clanInfo = this.gamedatas.clans[card.clan] || { name: card.clan, power: '', desc: '' };
         const isBruce = (card.clan === 'bruce');
         const isPersisted = (card.persisted == 1);
+        // You can see your own face-down army card's real face, but it's still secret to opponents.
+        const isSecretToOthers = (context === 'army') && card.is_face_up !== undefined && Number(card.is_face_up) === 0;
 
         el.innerHTML = `
+            ${isSecretToOthers ? '<div class="los-hidden-badge" title="Hidden from opponents until revealed">🙈 Hidden</div>' : ''}
             <div class="los-card-corner-top">
                 <span class="los-card-strength">${isBruce ? '★' : card.strength}</span>
                 <span class="los-card-clan-name">${clanInfo.name}</span>
@@ -477,6 +480,42 @@ export class Game {
             bruce: '👑',
         };
         return icons[clan] || '⚔️';
+    }
+
+    // FLIP-style travel animation: el is already in its final DOM position;
+    // fromRect (a getBoundingClientRect() captured before the move) is where it visually came from.
+    flyCardFromRect(el, fromRect) {
+        if (!el || !fromRect) return;
+        const toRect = el.getBoundingClientRect();
+        const dx = fromRect.left - toRect.left;
+        const dy = fromRect.top - toRect.top;
+        if (!dx && !dy) return;
+
+        el.classList.add('los-card-flying');
+        el.style.transition = 'none';
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
+                el.style.transform = 'translate(0, 0)';
+            });
+        });
+
+        const cleanup = () => {
+            el.style.transition = '';
+            el.style.transform = '';
+            el.classList.remove('los-card-flying');
+            el.removeEventListener('transitionend', cleanup);
+        };
+        el.addEventListener('transitionend', cleanup);
+        setTimeout(cleanup, 600); // safety net if transitionend never fires
+    }
+
+    popInCard(el) {
+        if (!el) return;
+        el.classList.add('los-card-pop-in');
+        el.addEventListener('animationend', () => el.classList.remove('los-card-pop-in'), { once: true });
     }
 
     onHandCardClick(card) {
@@ -647,26 +686,39 @@ export class Game {
     async notif_cardRecruited(notif) {
         const args = this._getNotifArgs(notif);
         const { player_id, slot, card, refill_card } = args;
-        // Refresh recruit row slot
+        const isMine = this.isCurrentPlayer(player_id);
+
+        // Capture the slot's current card position before we clear it, so the card
+        // that lands in the hand can visibly travel from the recruit row.
         const slotEl = document.getElementById(`recruit-slot-${slot}`);
+        const recruitedCardRect = (isMine && slotEl) ? slotEl.querySelector('.los-card')?.getBoundingClientRect() : null;
+
         if (slotEl) {
             slotEl.innerHTML = '';
             if (refill_card) {
-                slotEl.appendChild(this.createCardElement(refill_card, 'recruit'));
+                const refillEl = this.createCardElement(refill_card, 'recruit');
+                slotEl.appendChild(refillEl);
+                this.popInCard(refillEl);
             }
         }
         // If current player recruited, add card to hand
         // NOTE: Use isCurrentPlayer() — PHP sends player_id as int, BGA stores it as string.
-        if (this.isCurrentPlayer(player_id)) {
+        if (isMine) {
             const handContainer = document.getElementById('los-hand-cards');
             if (handContainer && card) {
-                // Remove any duplicate (e.g. optimistic insert) before appending
+                // Remove any duplicate (e.g. optimistic insert, or the follow-up private reveal) before appending
                 const existing = document.getElementById(`card-${card.card_id}`);
                 if (existing) existing.remove();
                 // Remove empty-hand placeholder if present
                 const emptyMsg = handContainer.querySelector('.los-empty-msg');
                 if (emptyMsg) emptyMsg.remove();
-                handContainer.appendChild(this.createCardElement(card, 'hand'));
+                const newCardEl = this.createCardElement(card, 'hand');
+                handContainer.appendChild(newCardEl);
+                if (recruitedCardRect) {
+                    this.flyCardFromRect(newCardEl, recruitedCardRect);
+                } else {
+                    this.popInCard(newCardEl);
+                }
             }
             const countEl = document.getElementById('los-hand-count');
             if (countEl && handContainer) {
@@ -681,10 +733,13 @@ export class Game {
         // reveal_to_owner: private follow-up notif that tells the owner the true identity
         // of their own face-down card (the public broadcast never carries clan/strength).
         const showRealFace = is_face_up || reveal_to_owner;
-        // Remove from current player's hand if it's them
+        // Remove from current player's hand if it's them, but capture where it was first
+        // so the card can visibly travel from hand into the army row.
         // NOTE: Use isCurrentPlayer() — PHP sends player_id as int, BGA stores it as string.
         const handCardEl = document.getElementById(`card-${card_id}`);
-        if (handCardEl && this.isCurrentPlayer(player_id)) {
+        const isMine = this.isCurrentPlayer(player_id);
+        const musteredFromRect = (isMine && handCardEl) ? handCardEl.getBoundingClientRect() : null;
+        if (handCardEl && isMine) {
             handCardEl.remove();
             const countEl = document.getElementById('los-hand-count');
             const handContainer = document.getElementById('los-hand-cards');
@@ -708,7 +763,13 @@ export class Game {
                 strength: showRealFace ? strength : 0,
                 is_face_up,
             };
-            armyRow.appendChild(this.createCardElement(cardData, 'army', player_id));
+            const newCardEl = this.createCardElement(cardData, 'army', player_id);
+            armyRow.appendChild(newCardEl);
+            if (musteredFromRect) {
+                this.flyCardFromRect(newCardEl, musteredFromRect);
+            } else {
+                this.popInCard(newCardEl);
+            }
         }
         const armyStrengthEl = document.getElementById(`army-strength-${player_id}`);
         if (armyStrengthEl && armyRow) {
