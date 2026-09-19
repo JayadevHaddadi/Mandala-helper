@@ -50,7 +50,7 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
             $victorInitiativePlayer = (int) $this->game->globals->get('victor_initiative', $activePlayerId);
             $this->game->gamestate->changeActivePlayer($victorInitiativePlayer);
 
-            $this->game->notifyAllPlayers("newRoundStarted", clienttranslate('--- Round ${round_num} of 5 begins! Recruit slot ${slot_display} turned face-up (${clan_name} ${strength}) ---'), [
+            $this->notify->all("newRoundStarted", clienttranslate('--- Round ${round_num} of 5 begins! Recruit slot ${slot_display} turned face-up (${clan_name} ${strength}) ---'), [
                 'round_num' => $currentRound,
                 'slot' => $slotToFlip,
                 'slot_display' => $slotToFlip + 1,

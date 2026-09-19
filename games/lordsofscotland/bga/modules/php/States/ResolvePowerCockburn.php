@@ -56,7 +56,7 @@ class ResolvePowerCockburn extends GameState
         $newClanName = Game::CLANS[$supporterCard['clan']]['name'];
         $newStrength = (int) $supporterCard['strength'];
 
-        $this->game->notifyAllPlayers("powerCockburnUsed", clienttranslate('${player_name} (Clan Cockburn) swaps their card with ${new_clan_name} (${new_strength}) from the Supporter row'), [
+        $this->notify->all("powerCockburnUsed", clienttranslate('${player_name} (Clan Cockburn) swaps their card with ${new_clan_name} (${new_strength}) from the Supporter row'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'cockburn_card_id' => $pendingCardId,
@@ -75,9 +75,5 @@ class ResolvePowerCockburn extends GameState
         return NextPlayer::class;
     }
 
-    public function zombieTurn(int $playerId): string
-    {
-        return $this->zombie($playerId);
-    }
 }
 

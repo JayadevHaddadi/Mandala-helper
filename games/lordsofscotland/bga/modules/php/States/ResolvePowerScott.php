@@ -61,7 +61,7 @@ class ResolvePowerScott extends GameState
         // Record copied clan
         Game::DbQuery("UPDATE `card` SET `copied_clan` = '$copiedClan' WHERE `card_id` = $pendingCardId");
 
-        $this->game->notifyAllPlayers("powerScottUsed", clienttranslate('${player_name} (Clan Scott) copies the power of ${copied_clan_name}: <strong>${power_desc}</strong>'), [
+        $this->notify->all("powerScottUsed", clienttranslate('${player_name} (Clan Scott) copies the power of ${copied_clan_name}: <strong>${power_desc}</strong>'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'scott_card_id' => $pendingCardId,
@@ -75,12 +75,12 @@ class ResolvePowerScott extends GameState
             case 'forsyth': // Draw a card
                 $drawn = $this->game->drawCardFromDeck('hand', $activePlayerId, 0);
                 if ($drawn) {
-                    $this->game->notifyPlayer($activePlayerId, "cardDrawn", clienttranslate('You drew ${clan_name} (${strength}) from the draw pile'), [
+                    $this->notify->player($activePlayerId, "cardDrawn", clienttranslate('You drew ${clan_name} (${strength}) from the draw pile'), [
                         'card' => $drawn,
                         'clan_name' => Game::CLANS[$drawn['clan']]['name'],
                         'strength' => $drawn['strength'],
                     ]);
-                    $this->game->notifyAllPlayers("deckCardDrawn", clienttranslate('${player_name} draws a card from the draw pile'), [
+                    $this->notify->all("deckCardDrawn", clienttranslate('${player_name} draws a card from the draw pile'), [
                         'player_id' => $activePlayerId,
                         'player_name' => $playerName,
                     ]);
@@ -89,7 +89,7 @@ class ResolvePowerScott extends GameState
 
             case 'makgill': // Extra muster
                 $this->game->globals->set('extra_muster_active', 1);
-                $this->game->notifyPlayer($activePlayerId, "extraMusterGranted", clienttranslate('Clan Makgill power allows you to immediately muster another clan card!'), []);
+                $this->notify->player($activePlayerId, "extraMusterGranted", clienttranslate('Clan Makgill power allows you to immediately muster another clan card!'), []);
                 return PlayerTurn::class;
 
             case 'wemyss':
@@ -114,9 +114,5 @@ class ResolvePowerScott extends GameState
         return NextPlayer::class;
     }
 
-    public function zombieTurn(int $playerId): string
-    {
-        return $this->zombie($playerId);
-    }
 }
 

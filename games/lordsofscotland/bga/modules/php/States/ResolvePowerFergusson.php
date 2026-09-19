@@ -63,7 +63,7 @@ class ResolvePowerFergusson extends GameState
         Game::DbQuery("UPDATE `card` SET `location_arg` = $targetPlayerId WHERE `card_id` = $pendingCardId");
         Game::DbQuery("UPDATE `card` SET `location_arg` = $activePlayerId WHERE `card_id` = $target_card_id");
 
-        $this->game->notifyAllPlayers("powerFergussonUsed", clienttranslate('${player_name} (Clan Fergusson) swaps their card with a card from ${target_player_name}’s army'), [
+        $this->notify->all("powerFergussonUsed", clienttranslate('${player_name} (Clan Fergusson) swaps their card with a card from ${target_player_name}’s army'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'target_player_id' => $targetPlayerId,
@@ -86,9 +86,5 @@ class ResolvePowerFergusson extends GameState
         return NextPlayer::class;
     }
 
-    public function zombieTurn(int $playerId): string
-    {
-        return $this->zombie($playerId);
-    }
 }
 

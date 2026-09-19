@@ -57,7 +57,7 @@ class DraftSupporter extends GameState
         $newScore = (int) $this->game->playerScore->get($activePlayerId);
         $this->game->playerStats->inc('supporters_claimed', 1, $activePlayerId);
 
-        $this->game->notifyAllPlayers("supporterDrafted", clienttranslate('${player_name} claims ${clan_name} (${strength} pts) from the Supporter row (New total score: ${new_score})'), [
+        $this->notify->all("supporterDrafted", clienttranslate('${player_name} claims ${clan_name} (${strength} pts) from the Supporter row (New total score: ${new_score})'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'card_id' => $card_id,
@@ -91,9 +91,5 @@ class DraftSupporter extends GameState
         return SkirmishResolution::class;
     }
 
-    public function zombieTurn(int $playerId): string
-    {
-        return $this->zombie($playerId);
-    }
 }
 

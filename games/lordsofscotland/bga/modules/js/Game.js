@@ -677,7 +677,10 @@ export class Game {
 
     async notif_cardMustered(notif) {
         const args = this._getNotifArgs(notif);
-        const { player_id, card_id, clan, strength, is_face_up } = args;
+        const { player_id, card_id, clan, strength, is_face_up, reveal_to_owner } = args;
+        // reveal_to_owner: private follow-up notif that tells the owner the true identity
+        // of their own face-down card (the public broadcast never carries clan/strength).
+        const showRealFace = is_face_up || reveal_to_owner;
         // Remove from current player's hand if it's them
         // NOTE: Use isCurrentPlayer() — PHP sends player_id as int, BGA stores it as string.
         const handCardEl = document.getElementById(`card-${card_id}`);
@@ -701,8 +704,8 @@ export class Game {
 
             const cardData = {
                 card_id,
-                clan: is_face_up ? clan : 'hidden',
-                strength: is_face_up ? strength : 0,
+                clan: showRealFace ? clan : 'hidden',
+                strength: showRealFace ? strength : 0,
                 is_face_up,
             };
             armyRow.appendChild(this.createCardElement(cardData, 'army', player_id));

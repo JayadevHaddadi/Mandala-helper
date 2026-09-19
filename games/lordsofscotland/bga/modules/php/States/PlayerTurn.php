@@ -87,16 +87,27 @@ class PlayerTurn extends GameState
         // Precompute power readiness so recipient immediately sees power state in hand
         $card['can_activate_power'] = $this->game->canActivatePower((int)$card['strength'], $card['clan']);
 
-        $this->game->notifyAllPlayers("cardRecruited", clienttranslate('${player_name} recruits a clan card from slot ${slot_display}'), [
+        $publicCard = $wasFaceUp ? $card : ['card_id' => $card['card_id'], 'clan' => 'hidden', 'strength' => 0, 'is_face_up' => 0];
+
+        $this->notify->all("cardRecruited", clienttranslate('${player_name} recruits a clan card from slot ${slot_display}'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'slot' => $slot,
             'slot_display' => $slot + 1,
             'card_id' => $card_id,
             'was_face_up' => $wasFaceUp,
-            'card' => $card,
+            'card' => $publicCard,
             'refill_card' => $refillCard && $wasFaceUp ? $refillCard : ($refillCard ? ['card_id' => $refillCard['card_id'], 'clan' => 'hidden', 'strength' => 0, 'slot' => $slot, 'is_face_up' => 0] : null),
         ]);
+
+        if (!$wasFaceUp) {
+            // Tell only the recruiting player the true identity of their new hand card.
+            $this->notify->player($activePlayerId, "cardRecruited", '', [
+                'player_id' => $activePlayerId,
+                'card_id' => $card_id,
+                'card' => $card,
+            ]);
+        }
 
         return NextPlayer::class;
     }
@@ -131,19 +142,27 @@ class PlayerTurn extends GameState
         $this->game->globals->set('extra_muster_active', 0);
 
         if (!$face_up) {
-            // Played face-down
-            $this->game->notifyAllPlayers("cardMustered", clienttranslate('${player_name} musters a clan face-down into their army'), [
+            // Played face-down: public broadcast stays masked, owner gets the true identity privately.
+            $this->notify->all("cardMustered", clienttranslate('${player_name} musters a clan face-down into their army'), [
                 'player_id' => $activePlayerId,
                 'player_name' => $playerName,
                 'card_id' => $card_id,
                 'is_face_up' => 0,
+            ]);
+            $this->notify->player($activePlayerId, "cardMustered", '', [
+                'player_id' => $activePlayerId,
+                'card_id' => $card_id,
+                'clan' => $clan,
+                'strength' => $strength,
+                'is_face_up' => 0,
+                'reveal_to_owner' => true,
             ]);
             return NextPlayer::class;
         }
 
         // Played face-up
         if (!$powerActivated) {
-            $this->game->notifyAllPlayers("cardMustered", clienttranslate('${player_name} musters ${clan_name} (${strength}) face-up (strength is not lowest; power does not activate)'), [
+            $this->notify->all("cardMustered", clienttranslate('${player_name} musters ${clan_name} (${strength}) face-up (strength is not lowest; power does not activate)'), [
                 'player_id' => $activePlayerId,
                 'player_name' => $playerName,
                 'card_id' => $card_id,
@@ -160,7 +179,7 @@ class PlayerTurn extends GameState
         $this->game->playerStats->inc('powers_activated', 1, $activePlayerId);
         $powerDesc = Game::CLANS[$clan]['power'];
 
-        $this->game->notifyAllPlayers("powerActivated", clienttranslate('${player_name} musters ${clan_name} (${strength}) and activates its power: <strong>${power_desc}</strong>!'), [
+        $this->notify->all("powerActivated", clienttranslate('${player_name} musters ${clan_name} (${strength}) and activates its power: <strong>${power_desc}</strong>!'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'card_id' => $card_id,
@@ -179,12 +198,12 @@ class PlayerTurn extends GameState
             case 'forsyth': // Draw a card
                 $drawn = $this->game->drawCardFromDeck('hand', $activePlayerId, 0);
                 if ($drawn) {
-                    $this->game->notifyPlayer($activePlayerId, "cardDrawn", clienttranslate('You drew ${clan_name} (${strength}) from the draw pile'), [
+                    $this->notify->player($activePlayerId, "cardDrawn", clienttranslate('You drew ${clan_name} (${strength}) from the draw pile'), [
                         'card' => $drawn,
                         'clan_name' => Game::CLANS[$drawn['clan']]['name'],
                         'strength' => $drawn['strength'],
                     ]);
-                    $this->game->notifyAllPlayers("deckCardDrawn", clienttranslate('${player_name} draws a card from the draw pile'), [
+                    $this->notify->all("deckCardDrawn", clienttranslate('${player_name} draws a card from the draw pile'), [
                         'player_id' => $activePlayerId,
                         'player_name' => $playerName,
                     ]);
@@ -193,7 +212,7 @@ class PlayerTurn extends GameState
 
             case 'makgill': // Muster another clan
                 $this->game->globals->set('extra_muster_active', 1);
-                $this->game->notifyPlayer($activePlayerId, "extraMusterGranted", clienttranslate('Clan Makgill allows you to immediately muster another clan card from your hand!'), []);
+                $this->notify->player($activePlayerId, "extraMusterGranted", clienttranslate('Clan Makgill allows you to immediately muster another clan card from your hand!'), []);
                 return PlayerTurn::class; // Stays active for extra muster!
 
             case 'wemyss': // Discard a clan
@@ -238,7 +257,7 @@ class PlayerTurn extends GameState
     public function actPass(int $activePlayerId): string
     {
         $playerName = $this->game->getPlayerNameById($activePlayerId);
-        $this->game->notifyAllPlayers("playerPassed", clienttranslate('${player_name} passes their turn'), [
+        $this->notify->all("playerPassed", clienttranslate('${player_name} passes their turn'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
         ]);
@@ -254,8 +273,4 @@ class PlayerTurn extends GameState
         return NextPlayer::class;
     }
 
-    public function zombieTurn(int $playerId): string
-    {
-        return $this->zombie($playerId);
-    }
 }

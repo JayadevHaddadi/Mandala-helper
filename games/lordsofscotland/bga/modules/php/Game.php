@@ -108,7 +108,6 @@ class Game extends \Bga\GameFramework\Table
 
     protected function getAllDatas(int $currentPlayerId): array
     {
-        $this->ensureSchema();
         $result = [];
 
         $result['players'] = $this->getCollectionFromDb(

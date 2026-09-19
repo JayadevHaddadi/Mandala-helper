@@ -63,7 +63,7 @@ class ResolvePowerWemyss extends GameState
 
         $cardDesc = $target['is_face_up'] ? (Game::CLANS[$target['clan']]['name'] . ' (' . $target['strength'] . ')') : clienttranslate('a face-down card');
 
-        $this->game->notifyAllPlayers("powerWemyssUsed", clienttranslate('${player_name} (Clan Wemyss) discards ${card_desc} from ${victim_name}’s army'), [
+        $this->notify->all("powerWemyssUsed", clienttranslate('${player_name} (Clan Wemyss) discards ${card_desc} from ${victim_name}’s army'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'victim_id' => $victimId,
@@ -86,9 +86,5 @@ class ResolvePowerWemyss extends GameState
         return NextPlayer::class;
     }
 
-    public function zombieTurn(int $playerId): string
-    {
-        return $this->zombie($playerId);
-    }
 }
 

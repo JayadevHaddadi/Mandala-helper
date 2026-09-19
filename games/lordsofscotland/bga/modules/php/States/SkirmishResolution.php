@@ -88,7 +88,7 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
             $this->game->globals->set('current_draft_index', 0);
             $this->game->globals->set('skirmish_resolution_started', 1);
 
-            $this->game->notifyAllPlayers("skirmishResolved", clienttranslate('=== The 5 rounds are over! Skirmish armies are revealed ==='), [
+            $this->notify->all("skirmishResolved", clienttranslate('=== The 5 rounds are over! Skirmish armies are revealed ==='), [
                 'rankings' => $rankings,
             ]);
         }
@@ -163,7 +163,7 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         // Victor starts next skirmish
         $this->game->gamestate->changeActivePlayer($winnerId);
 
-        $this->game->notifyAllPlayers("newSkirmishStarted", clienttranslate('=== Skirmish #${skirmish_num} begins! Victor’s Initiative is held by ${winner_name} ==='), [
+        $this->notify->all("newSkirmishStarted", clienttranslate('=== Skirmish #${skirmish_num} begins! Victor’s Initiative is held by ${winner_name} ==='), [
             'skirmish_num' => $skirmishNum,
             'winner_id' => $winnerId,
             'winner_name' => $winner ? $winner['name'] : '',
