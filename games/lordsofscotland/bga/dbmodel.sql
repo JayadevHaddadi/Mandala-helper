@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS `card` (
   `is_face_up` TINYINT(1) NOT NULL DEFAULT 0,
   `copied_clan` VARCHAR(16) DEFAULT NULL,
   `persisted` TINYINT(1) NOT NULL DEFAULT 0,
+  `power_activated` TINYINT(1) NOT NULL DEFAULT 0,
+  `rank` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   `round_played` TINYINT NOT NULL DEFAULT 0,
   PRIMARY KEY (`card_id`),
   INDEX `idx_location` (`location`, `location_arg`)

@@ -123,9 +123,11 @@ class PlayerTurn extends GameState
         $currentRound = (int) $this->game->globals->get('current_round', 1);
         $isFaceUpInt = $face_up ? 1 : 0;
 
-        // Move to army
+        // Move to army. Reset copied_clan/power_activated in case this physical card previously
+        // lived a whole other life (e.g. was a Scott copy or an activated Bruce before being
+        // discarded and reshuffled back into the deck) — those flags must never carry over.
         Game::DbQuery(
-            "UPDATE `card` SET `location` = 'army', `location_arg` = $activePlayerId, `is_face_up` = $isFaceUpInt, `round_played` = $currentRound WHERE `card_id` = $card_id"
+            "UPDATE `card` SET `location` = 'army', `location_arg` = $activePlayerId, `is_face_up` = $isFaceUpInt, `round_played` = $currentRound, `copied_clan` = NULL, `power_activated` = 0 WHERE `card_id` = $card_id"
         );
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
@@ -136,6 +138,9 @@ class PlayerTurn extends GameState
         $powerActivated = false;
         if ($face_up) {
             $powerActivated = $this->game->canActivatePower($strength, $clan, $card_id);
+            if ($powerActivated) {
+                Game::DbQuery("UPDATE `card` SET `power_activated` = 1 WHERE `card_id` = $card_id");
+            }
         }
 
         // Clear extra muster flag if it was active

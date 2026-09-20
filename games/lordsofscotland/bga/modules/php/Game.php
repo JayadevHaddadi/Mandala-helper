@@ -89,10 +89,25 @@ class Game extends \Bga\GameFramework\Table
           `is_face_up` TINYINT(1) NOT NULL DEFAULT 0,
           `copied_clan` VARCHAR(16) DEFAULT NULL,
           `persisted` TINYINT(1) NOT NULL DEFAULT 0,
+          `power_activated` TINYINT(1) NOT NULL DEFAULT 0,
+          `rank` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
           `round_played` TINYINT NOT NULL DEFAULT 0,
           PRIMARY KEY (`card_id`),
           INDEX `idx_location` (`location`, `location_arg`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1;");
+
+        // Defensive migration: a table created before these columns existed won't get them from
+        // CREATE TABLE IF NOT EXISTS alone (BGA keeps the same DB across restarts).
+        foreach (['power_activated' => 'TINYINT(1) NOT NULL DEFAULT 0', 'rank' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 0'] as $col => $def) {
+            try {
+                $cols = self::getObjectListFromDb("SHOW COLUMNS FROM `card` LIKE '$col'");
+                if (empty($cols)) {
+                    self::DbQuery("ALTER TABLE `card` ADD COLUMN `$col` $def");
+                }
+            } catch (\Exception $e) {
+                // Ignore
+            }
+        }
     }
 
     public function getGameProgression(): int
@@ -228,21 +243,32 @@ class Game extends \Bga\GameFramework\Table
         $includeBruce = (int) ($options[100] ?? 1) === 2;
         $cardsToInsert = [];
 
+        // Every physical card has a globally unique `rank` (separate from `strength`), printed in
+        // its top-right corner, used only to break skirmish ties (rulebook, p.2 & p.5). We don't
+        // have the real printed values, so we assign a deterministic, collision-free rank per
+        // clan+strength slot instead: still a fair, consistent tiebreaker even if the exact
+        // numbers don't match a physical card.
+        $clanIndex = 0;
+        $nonBruceClans = array_filter(array_keys(self::CLANS), fn($c) => $c !== 'bruce');
+        $bruceRank = count($nonBruceClans) * 12 + 1;
+
         foreach (array_keys(self::CLANS) as $clan) {
             if ($clan === 'bruce') {
                 if ($includeBruce) {
-                    $cardsToInsert[] = "('bruce', 0, 'deck', 0, 0)";
-                    $cardsToInsert[] = "('bruce', 0, 'deck', 0, 0)";
+                    $cardsToInsert[] = "('bruce', 0, 'deck', 0, 0, $bruceRank)";
+                    $cardsToInsert[] = "('bruce', 0, 'deck', 0, 0, " . ($bruceRank + 1) . ")";
                 }
                 continue;
             }
             for ($s = 1; $s <= 12; $s++) {
-                $cardsToInsert[] = "('$clan', $s, 'deck', 0, 0)";
+                $rank = $clanIndex * 12 + $s;
+                $cardsToInsert[] = "('$clan', $s, 'deck', 0, 0, $rank)";
             }
+            $clanIndex++;
         }
 
         self::DbQuery(
-            "INSERT INTO `card` (`clan`, `strength`, `location`, `location_arg`, `is_face_up`) VALUES " . implode(',', $cardsToInsert)
+            "INSERT INTO `card` (`clan`, `strength`, `location`, `location_arg`, `is_face_up`, `rank`) VALUES " . implode(',', $cardsToInsert)
         );
 
         // 2. Setup Globals
@@ -351,13 +377,17 @@ class Game extends \Bga\GameFramework\Table
         $numPlayers = (int) self::getUniqueValueFromDb("SELECT COUNT(*) FROM `player`");
 
         if ($numPlayers <= 3) {
+            // Rulebook: activates if no OTHER face-up Follower has LOWER strength — a tie for
+            // lowest still qualifies, so this must be <=, not <.
             $lowest = $this->getLowestFaceUpStrengthInSkirmish(null, $excludeCardId);
             if ($lowest === null) {
                 return true; // First face-up card in the skirmish automatically qualifies!
             }
-            return $strength < $lowest;
+            return $strength <= $lowest;
         } else {
-            // 4 or 5 players: checked against same bloodline
+            // 4 or 5 players: checked against same bloodline. Rulebook: activates only if no
+            // OTHER same-clan Follower has strength EQUAL TO OR LESS than yours — ties block here,
+            // deliberately stricter than the base rule above.
             $lowest = $this->getLowestFaceUpStrengthInSkirmish($clan, $excludeCardId);
             if ($lowest === null) {
                 return true; // First face-up card of this bloodline qualifies!
@@ -369,15 +399,16 @@ class Game extends \Bga\GameFramework\Table
     public function calculateArmyStrength(int $playerId): array
     {
         $cards = self::getObjectListFromDb(
-            "SELECT `card_id`, `clan`, `strength`, `is_face_up`, `copied_clan`, `persisted` FROM `card` WHERE `location` = 'army' AND `location_arg` = $playerId"
+            "SELECT `card_id`, `clan`, `strength`, `is_face_up`, `copied_clan`, `persisted`, `power_activated`, `rank` FROM `card` WHERE `location` = 'army' AND `location_arg` = $playerId"
         );
 
         if (empty($cards)) {
-            return ['total' => 0, 'doubled' => false, 'cards' => [], 'max_card' => 0];
+            return ['total' => 0, 'doubled' => false, 'cards' => [], 'max_card' => 0, 'max_rank' => 0];
         }
 
         $sum = 0;
         $maxCard = 0;
+        $maxRank = 0;
         $clans = [];
 
         foreach ($cards as $c) {
@@ -386,7 +417,15 @@ class Game extends \Bga\GameFramework\Table
             if ($st > $maxCard) {
                 $maxCard = $st;
             }
-            if ($c['clan'] !== 'bruce') {
+            if ((int) $c['rank'] > $maxRank) {
+                $maxRank = (int) $c['rank'];
+            }
+            // Bruce's wildcard-clan power (or a Scott card that copied it) only counts if it was
+            // genuinely activated — a face-down or non-qualifying Bruce is just its own bloodline.
+            $activated = (int) $c['power_activated'] === 1;
+            $isWildcard = ($c['clan'] === 'bruce' && $activated)
+                || ($c['clan'] === 'scott' && ($c['copied_clan'] ?? '') === 'bruce' && $activated);
+            if (!$isWildcard) {
                 $clans[] = $c['clan'];
             }
         }
@@ -407,6 +446,7 @@ class Game extends \Bga\GameFramework\Table
             'doubled' => $doubled,
             'cards' => $cards,
             'max_card' => $maxCard,
+            'max_rank' => $maxRank,
         ];
     }
 }

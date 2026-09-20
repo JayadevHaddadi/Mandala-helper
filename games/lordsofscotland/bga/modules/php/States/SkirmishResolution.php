@@ -46,9 +46,13 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                     $this->game->playerStats->inc('bloodlines_doubled', 1, $pIdInt);
                 }
 
-                // Check if player has Cochrane in their army (claim 2 supporters)
+                // Check if player has an activated Cochrane in their army (claim 2 supporters).
+                // A face-down or non-qualifying Cochrane never activated, so it doesn't count.
                 $hasCochrane = false;
                 foreach ($calc['cards'] as $c) {
+                    if ((int) $c['power_activated'] !== 1) {
+                        continue;
+                    }
                     if ($c['clan'] === 'cochrane' || ($c['clan'] === 'scott' && ($c['copied_clan'] ?? '') === 'cochrane')) {
                         $hasCochrane = true;
                         break;
@@ -61,6 +65,7 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                     'total' => $calc['total'],
                     'doubled' => $calc['doubled'],
                     'max_card' => $calc['max_card'],
+                    'max_rank' => $calc['max_rank'],
                     'card_count' => count($calc['cards']),
                     'cards' => $calc['cards'],
                     'has_cochrane' => $hasCochrane,
@@ -68,13 +73,16 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                 ];
             }
 
-            // Sort: total DESC, max_card DESC, is_vi DESC
+            // Sort: total strength DESC, then tie-break by each player's single highest-RANK card
+            // (rulebook p.5: "the player who controls the highest ranking Clan... wins the tie" —
+            // rank is a card's distinct printed tiebreak number, separate from its strength, so a
+            // strength tie must NOT be resolved by comparing strength again).
             usort($rankings, function ($a, $b) {
                 if ($a['total'] !== $b['total']) {
                     return $b['total'] <=> $a['total'];
                 }
-                if ($a['max_card'] !== $b['max_card']) {
-                    return $b['max_card'] <=> $a['max_card'];
+                if ($a['max_rank'] !== $b['max_rank']) {
+                    return $b['max_rank'] <=> $a['max_rank'];
                 }
                 return ($b['is_vi'] ? 1 : 0) <=> ($a['is_vi'] ? 1 : 0);
             });
@@ -135,13 +143,21 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         }
 
         // Otherwise, prepare next skirmish
-        // 1. Discard army cards (except Macdonnell where persisted == 0)
-        // Persisted == 0 Macdonnell cards become persisted == 1 and stay in army
+        // 1. Discard army cards, except a Macdonnell (or Scott copying Macdonnell) that genuinely
+        //    activated this skirmish and hasn't already used its one bonus round. Rulebook: "After
+        //    its first round, [...] its power is no longer active" — so persisted=1 cards discard
+        //    normally here, they don't get a second reprieve.
+        $macdonnellSurvivor = "(
+            ((`clan` = 'macdonnell' AND `power_activated` = 1) OR (`clan` = 'scott' AND `copied_clan` = 'macdonnell' AND `power_activated` = 1))
+            AND `persisted` = 0
+        )";
         Game::DbQuery(
-            "UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0 WHERE `location` = 'army' AND (`clan` != 'macdonnell' OR `persisted` = 1)"
+            "UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0, `persisted` = 0, `power_activated` = 0, `copied_clan` = NULL
+             WHERE `location` = 'army' AND NOT $macdonnellSurvivor"
         );
         Game::DbQuery(
-            "UPDATE `card` SET `persisted` = 1, `copied_clan` = NULL WHERE `location` = 'army' AND `clan` = 'macdonnell'"
+            "UPDATE `card` SET `persisted` = 1, `power_activated` = 0, `copied_clan` = NULL
+             WHERE `location` = 'army' AND $macdonnellSurvivor"
         );
 
         // 2. Discard remaining recruit and supporter cards

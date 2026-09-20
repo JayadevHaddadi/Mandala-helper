@@ -26,8 +26,9 @@ class ResolvePowerFergusson extends GameState
         $activePlayerId = (int) $this->game->getActivePlayerId();
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
 
+        // Fergusson's power swaps into an OPPONENT's army only (rulebook: "take one of their Followers").
         $eligibleCards = Game::getObjectListFromDb(
-            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up` FROM `card` WHERE `location` = 'army' AND `card_id` != $pendingCardId ORDER BY `location_arg`, `card_id`"
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up` FROM `card` WHERE `location` = 'army' AND `card_id` != $pendingCardId AND `location_arg` != $activePlayerId ORDER BY `location_arg`, `card_id`"
         );
 
         foreach ($eligibleCards as &$c) {
@@ -53,6 +54,10 @@ class ResolvePowerFergusson extends GameState
 
         if (!$fergussonCard || !$targetCard) {
             throw new UserException(clienttranslate('Invalid cards for swap'));
+        }
+
+        if ((int) $targetCard['location_arg'] === $activePlayerId) {
+            throw new UserException(clienttranslate('Clan Fergusson must swap into an opponent\'s army, not your own'));
         }
 
         $targetPlayerId = (int) $targetCard['location_arg'];

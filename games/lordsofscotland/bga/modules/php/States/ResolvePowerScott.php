@@ -58,8 +58,9 @@ class ResolvePowerScott extends GameState
         $powerDesc = Game::CLANS[$copiedClan]['power'];
         $playerName = $this->game->getPlayerNameById($activePlayerId);
 
-        // Record copied clan
-        Game::DbQuery("UPDATE `card` SET `copied_clan` = '$copiedClan' WHERE `card_id` = $pendingCardId");
+        // Record copied clan. power_activated matters for end-of-round copies (Bruce/Cochrane/
+        // Macdonnell) — those checks require genuine activation, not just clan identity.
+        Game::DbQuery("UPDATE `card` SET `copied_clan` = '$copiedClan', `power_activated` = 1 WHERE `card_id` = $pendingCardId");
 
         $this->notify->all("powerScottUsed", clienttranslate('${player_name} (Clan Scott) copies the power of ${copied_clan_name}: <strong>${power_desc}</strong>'), [
             'player_id' => $activePlayerId,
