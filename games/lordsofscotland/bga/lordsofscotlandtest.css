@@ -190,6 +190,15 @@
     color: #c9d1d9;
 }
 
+.los-army-strength {
+    color: var(--los-gold-bright);
+    font-weight: 600;
+}
+
+.los-army-cards-row {
+    min-height: calc(var(--card-h) + 8px);
+}
+
 /* Card Styling */
 .los-card {
     width: var(--card-w);

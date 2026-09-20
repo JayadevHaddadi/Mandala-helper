@@ -58,19 +58,32 @@ class ResolvePowerFergusson extends GameState
         $targetPlayerId = (int) $targetCard['location_arg'];
         $targetPlayerName = $this->game->getPlayerNameById($targetPlayerId);
         $playerName = $this->game->getPlayerNameById($activePlayerId);
-
         // Swap player_id location_args, keep is_face_up orientations
         Game::DbQuery("UPDATE `card` SET `location_arg` = $targetPlayerId WHERE `card_id` = $pendingCardId");
         Game::DbQuery("UPDATE `card` SET `location_arg` = $activePlayerId WHERE `card_id` = $target_card_id");
 
-        $this->notify->all("powerFergussonUsed", clienttranslate('${player_name} (Clan Fergusson) swaps their card with a card from ${target_player_name}’s army'), [
+        $targetCard = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $target_card_id");
+        $fergussonCard = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $pendingCardId");
+
+        $publicTargetCard = $targetCard['is_face_up'] ? $targetCard : ['card_id' => $target_card_id, 'clan' => 'hidden', 'strength' => 0, 'is_face_up' => 0];
+
+        $this->notify->all("powerFergussonUsed", clienttranslate('${player_name} (Clan Fergusson) swaps their card with a card from ${target_player_name}\'s army'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'target_player_id' => $targetPlayerId,
             'target_player_name' => $targetPlayerName,
             'fergusson_card_id' => $pendingCardId,
             'target_card_id' => $target_card_id,
+            'fergusson_card' => $fergussonCard,
+            'target_card' => $publicTargetCard,
         ]);
+
+        if (!$targetCard['is_face_up']) {
+            $this->notify->player($activePlayerId, "cardRevealedToOwner", '', [
+                'card' => $targetCard,
+                'player_id' => $activePlayerId,
+            ]);
+        }
 
         $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
         return $extraMuster ? PlayerTurn::class : NextPlayer::class;

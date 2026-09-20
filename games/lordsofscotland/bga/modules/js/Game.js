@@ -19,6 +19,11 @@ class PlayerTurn {
             const extraMuster = args.extra_muster_active;
             if (extraMuster) {
                 this.bga.statusBar.setTitle(_('${you} may muster another clan card from your hand (Clan Makgill power)'));
+                if (typeof this.bga.statusBar.addActionButton === 'function') {
+                    this.bga.statusBar.addActionButton('btnPassExtraMuster', _('Pass (Skip extra muster)'), () => {
+                        this.bga.actions.performAction('actPass', {});
+                    }, 'secondary');
+                }
             } else if (!args.can_recruit) {
                 this.bga.statusBar.setTitle(_('${you} must muster a clan card from your hand into your army (Hand full)'));
             } else {
@@ -775,6 +780,7 @@ export class Game {
         if (armyStrengthEl && armyRow) {
             armyStrengthEl.textContent = `Army: ${armyRow.children.length} cards`;
         }
+        this.updateLowestFaceUp();
     }
 
     async notif_powerActivated(notif) {
@@ -855,46 +861,129 @@ export class Game {
         const roundEl = document.getElementById('los-round-val');
         if (roundEl) roundEl.textContent = `1 / 5`;
 
+        const lowestEl = document.getElementById('los-lowest-val');
+        if (lowestEl) lowestEl.textContent = '-';
+
         this.gamedatas.victor_initiative = winner_id;
         this.updateVictorInitiativeBadge();
     }
 
     async notif_powerWemyssUsed(notif) {
         const args = this._getNotifArgs(notif);
-        const { victim_id, card_id } = args;
-        const cardEl = document.getElementById(`card-${card_id}`);
+        const cardId = args.target_card_id || args.card_id;
+        const victimId = args.victim_id;
+        const cardEl = document.getElementById(`card-${cardId}`);
         if (cardEl) cardEl.remove();
-        const armyRow = document.getElementById(`army-cards-${victim_id}`);
-        const armyStrengthEl = document.getElementById(`army-strength-${victim_id}`);
+        const armyRow = document.getElementById(`army-cards-${victimId}`);
+        const armyStrengthEl = document.getElementById(`army-strength-${victimId}`);
         if (armyStrengthEl && armyRow) {
             armyStrengthEl.textContent = `Army: ${armyRow.children.length} cards`;
         }
+        this.updateLowestFaceUp();
     }
 
     async notif_powerFergussonUsed(notif) {
         const args = this._getNotifArgs(notif);
-        const { player_id, target_player_id, fergusson_card_id, target_card_id, new_own_card, new_target_card } = args;
+        const { player_id, target_player_id, fergusson_card_id, target_card_id, fergusson_card, target_card } = args;
         const ownEl = document.getElementById(`card-${fergusson_card_id}`);
         const targetEl = document.getElementById(`card-${target_card_id}`);
-        if (ownEl && targetEl) {
-            const ownParent = ownEl.parentNode;
-            const targetParent = targetEl.parentNode;
-            ownParent.insertBefore(targetEl, ownEl);
-            targetParent.appendChild(ownEl);
+        const ownArmyRow = document.getElementById(`army-cards-${player_id}`);
+        const targetArmyRow = document.getElementById(`army-cards-${target_player_id}`);
+
+        if (ownArmyRow && targetArmyRow) {
+            if (ownEl) ownEl.remove();
+            if (targetEl) targetEl.remove();
+
+            if (fergusson_card) {
+                targetArmyRow.appendChild(this.createCardElement(fergusson_card, 'army', target_player_id));
+            }
+            if (target_card) {
+                ownArmyRow.appendChild(this.createCardElement(target_card, 'army', player_id));
+            }
+
+            const ownStrengthEl = document.getElementById(`army-strength-${player_id}`);
+            if (ownStrengthEl) ownStrengthEl.textContent = `Army: ${ownArmyRow.children.length} cards`;
+            const targetStrengthEl = document.getElementById(`army-strength-${target_player_id}`);
+            if (targetStrengthEl) targetStrengthEl.textContent = `Army: ${targetArmyRow.children.length} cards`;
         }
+        this.updateLowestFaceUp();
     }
 
     async notif_powerCockburnUsed(notif) {
         const args = this._getNotifArgs(notif);
-        const { player_id, cockburn_card_id, supporter_card_id, new_army_card, new_supporter_card } = args;
+        const { player_id, cockburn_card_id, supporter_card_id, cockburn_card, supporter_card } = args;
         const armyCardEl = document.getElementById(`card-${cockburn_card_id}`);
         const supporterCardEl = document.getElementById(`card-${supporter_card_id}`);
-        if (armyCardEl && supporterCardEl) {
-            const armyParent = armyCardEl.parentNode;
-            const supporterParent = supporterCardEl.parentNode;
-            armyParent.insertBefore(supporterCardEl, armyCardEl);
-            supporterParent.appendChild(armyCardEl);
+        const armyRow = document.getElementById(`army-cards-${player_id}`);
+        const supporterRow = document.getElementById('los-supporter-row');
+
+        if (armyRow && supporterRow) {
+            if (armyCardEl) armyCardEl.remove();
+            if (supporterCardEl) supporterCardEl.remove();
+
+            if (supporter_card) {
+                armyRow.appendChild(this.createCardElement(supporter_card, 'army', player_id));
+            }
+            if (cockburn_card) {
+                supporterRow.appendChild(this.createCardElement(cockburn_card, 'supporter'));
+            }
+
+            const armyStrengthEl = document.getElementById(`army-strength-${player_id}`);
+            if (armyStrengthEl) armyStrengthEl.textContent = `Army: ${armyRow.children.length} cards`;
         }
+        this.updateLowestFaceUp();
+    }
+
+    async notif_powerScottUsed(notif) {
+        const args = this._getNotifArgs(notif);
+        const { scott_card_id, copied_clan_name } = args;
+        const cardEl = document.getElementById(`card-${scott_card_id}`);
+        if (cardEl) {
+            let badge = cardEl.querySelector('.los-copied-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'los-copied-badge';
+                cardEl.appendChild(badge);
+            }
+            badge.textContent = `Copied: ${copied_clan_name}`;
+        }
+    }
+
+    async notif_deckCardDrawn(notif) {
+        // Notification logged automatically by BGA log system
+    }
+
+    async notif_playerPassed(notif) {
+        this.clearHighlights();
+    }
+
+    async notif_cardRevealedToOwner(notif) {
+        const args = this._getNotifArgs(notif);
+        const { card, player_id } = args;
+        if (card && this.isCurrentPlayer(player_id)) {
+            const cardEl = document.getElementById(`card-${card.card_id}`);
+            if (cardEl && cardEl.parentNode) {
+                const newEl = this.createCardElement(card, 'army', player_id);
+                cardEl.parentNode.replaceChild(newEl, cardEl);
+            }
+        }
+    }
+
+    updateLowestFaceUp() {
+        let minStrength = null;
+        document.querySelectorAll('#los-armies-container .los-card:not(.los-card-back)').forEach(el => {
+            const strAttr = el.dataset.strength;
+            if (strAttr !== undefined && strAttr !== '') {
+                const val = parseInt(strAttr, 10);
+                if (!isNaN(val) && val > 0) {
+                    if (minStrength === null || val < minStrength) {
+                        minStrength = val;
+                    }
+                }
+            }
+        });
+        const el = document.getElementById('los-lowest-val');
+        if (el) el.textContent = minStrength !== null ? minStrength : '-';
     }
 }
 

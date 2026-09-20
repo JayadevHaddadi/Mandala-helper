@@ -85,7 +85,8 @@ class ResolvePowerScott extends GameState
                         'player_name' => $playerName,
                     ]);
                 }
-                return NextPlayer::class;
+                $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
+                return $extraMuster ? PlayerTurn::class : NextPlayer::class;
 
             case 'makgill': // Extra muster
                 $this->game->globals->set('extra_muster_active', 1);
@@ -105,7 +106,8 @@ class ResolvePowerScott extends GameState
             case 'macdonnell':
             case 'bruce':
             default:
-                return NextPlayer::class;
+                $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
+                return $extraMuster ? PlayerTurn::class : NextPlayer::class;
         }
     }
 

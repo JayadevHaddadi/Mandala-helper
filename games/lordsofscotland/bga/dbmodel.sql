@@ -1,7 +1,7 @@
 
 -- ------
 -- BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
--- lordsofscotlandtest implementation : © <Your name here> <Your email address here>
+-- lordsofscotlandtest implementation : © Jayadev Haddadi
 -- 
 -- This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
 -- See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -16,6 +16,7 @@
 -- Note: The database schema is created from this file when the game starts. If you modify this file,
 --       you have to restart a game to see your changes in database.
 
+DROP TABLE IF EXISTS `card`;
 -- Card table for all 98 clan cards in Lords of Scotland
 CREATE TABLE IF NOT EXISTS `card` (
   `card_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,

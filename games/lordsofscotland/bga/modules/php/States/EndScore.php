@@ -26,9 +26,8 @@ class EndScore extends \Bga\GameFramework\States\GameState
      *
      * The onEnteringState method of state `EndScore` is called just before the end of the game.
      */
-    public function onEnteringState() {
-        // Here, we would compute scores if they are not updated live, and compute average statistics
-
+    public function onEnteringState(?int $activePlayerId = null): int|string
+    {
         return ST_END_GAME;
     }
 }

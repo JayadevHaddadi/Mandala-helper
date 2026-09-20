@@ -11,27 +11,27 @@
     // Statistics for each player
     "player": {
       "skirmishes_won": {
-        "id": 10,
+        "id": 20,
         "name": "Skirmishes won",
         "type": "int"
       },
       "supporters_claimed": {
-        "id": 11,
+        "id": 21,
         "name": "Supporters claimed",
         "type": "int"
       },
       "bloodlines_doubled": {
-        "id": 12,
+        "id": 22,
         "name": "Bloodlines doubled",
         "type": "int"
       },
       "highest_army_strength": {
-        "id": 13,
+        "id": 23,
         "name": "Highest army strength",
         "type": "int"
       },
       "powers_activated": {
-        "id": 14,
+        "id": 24,
         "name": "Clan powers activated",
         "type": "int"
       }

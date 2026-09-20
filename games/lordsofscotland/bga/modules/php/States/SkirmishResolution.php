@@ -125,6 +125,12 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         // Check if any player has reached 40 or more points
         $maxScore = (int) Game::getUniqueValueFromDb("SELECT MAX(`player_score`) FROM `player`");
         if ($maxScore >= 40) {
+            $rankCount = count($rankings);
+            foreach ($rankings as $idx => $r) {
+                $auxScore = $rankCount - $idx;
+                $pId = (int) $r['player_id'];
+                Game::DbQuery("UPDATE `player` SET `player_score_aux` = $auxScore WHERE `player_id` = $pId");
+            }
             return EndScore::class;
         }
 
@@ -163,7 +169,7 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         // Victor starts next skirmish
         $this->game->gamestate->changeActivePlayer($winnerId);
 
-        $this->notify->all("newSkirmishStarted", clienttranslate('=== Skirmish #${skirmish_num} begins! Victor’s Initiative is held by ${winner_name} ==='), [
+        $this->notify->all("newSkirmishStarted", clienttranslate('=== Skirmish #${skirmish_num} begins! Victor\'s Initiative is held by ${winner_name} ==='), [
             'skirmish_num' => $skirmishNum,
             'winner_id' => $winnerId,
             'winner_name' => $winner ? $winner['name'] : '',

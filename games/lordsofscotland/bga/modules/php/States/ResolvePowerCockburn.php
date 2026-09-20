@@ -61,6 +61,8 @@ class ResolvePowerCockburn extends GameState
             'player_name' => $playerName,
             'cockburn_card_id' => $pendingCardId,
             'supporter_card_id' => $supporter_card_id,
+            'cockburn_card' => $cockburnCard,
+            'supporter_card' => $supporterCard,
             'new_clan' => $supporterCard['clan'],
             'new_clan_name' => $newClanName,
             'new_strength' => $newStrength,
