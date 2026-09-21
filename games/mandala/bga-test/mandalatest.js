@@ -50,7 +50,7 @@ function (dojo, declare, bgaHelp) {
             this.deckCounter;
             this.discardPileCounter;
 
-            // Live score tracking data
+            // FIX 1: Live Score Tracker & River Breakdown - Track river multipliers and cup cards
             this.riverMultipliers = {};
             this.riverSlots = {};
             this.cupCardsCounts = {};
@@ -60,7 +60,7 @@ function (dojo, declare, bgaHelp) {
             // To show the card facedown or not
             this.showBack = false;
 
-            // Pending move confirmation state
+            // FIX 3: Undo button - Store pending move for confirmation before sending to server
             this.pendingMove = null;
 
             // To consider showing the playmat for the second player in reverted order
@@ -96,6 +96,10 @@ function (dojo, declare, bgaHelp) {
 
             // Colorblind suffix
             this.cb = this.bga.userPreferences.get(100) == 2 ? "_cb" : "";
+
+            // Score display: table-wide game option, sent directly in gamedatas (not a
+            // per-player preference — see gameoptions.json id 100). 1 = End of game, 2 = Ongoing.
+            this.scoreDisplayMode = gamedatas.score_display_mode || 2;
 
             // Setting scale
             this.resizeListener = dojo.connect(window, 'resize', () => {
@@ -214,17 +218,31 @@ function (dojo, declare, bgaHelp) {
             // Setup game notifications to handle (see "setupNotifications" method below)
             this.setupNotifications();
 
-            // Initial live score calculation & missing colors update
-            this.updateLiveScores();
-            this.updateMissingColors();
-            setTimeout(() => {
-                this.updateLiveScores();
-                this.updateMissingColors();
-            }, 250);
-            setTimeout(() => {
-                this.updateLiveScores();
-                this.updateMissingColors();
-            }, 1000);
+            // FIX 1: Live Score Tracker & River Breakdown - Initial live score calculation
+            // FIX 2: Mandala Missing Colors Indicator - Initial missing colors update
+            // this.updateLiveScores();
+            // this.updateMissingColors();
+            // setTimeout(() => {
+            //     this.updateLiveScores();
+            //     this.updateMissingColors();
+            // }, 250);
+            // setTimeout(() => {
+            //     this.updateLiveScores();
+            //     this.updateMissingColors();
+            // }, 1000);
+            requestAnimationFrame(() => {
+                // Score display is now a table-wide game option (gamedatas.score_display_mode),
+                // not per-player preference 102 — everyone at the table sees the same mode.
+                if (this.scoreDisplayMode != 1) {
+                    this.updateLiveScores();
+                }
+                if (this.bga.userPreferences.get(103) == 1) {
+                    this.updateMissingColors();
+                } else {
+                    // Hide containers if preference is disabled
+                    dojo.query('.mdl_mandala_missing').style('display', 'none');
+                }
+            });
 
             if (gamedatas.finalScore != null) {
                 this.scoreDlg = this.displayTableWindow(
@@ -494,6 +512,7 @@ function (dojo, declare, bgaHelp) {
             this.fields['field_2'][playerId].horizontal_overlap = this.getOverlap(this.fields['field_2'][playerId]);
 
             // Player river
+            // FIX 1: Live Score Tracker & River Breakdown - Track which colors are in each river slot
             this.riverMultipliers[playerId] = {};
             this.riverSlots[playerId] = {};
             for (let i=1;i<=6;i++) {
@@ -509,6 +528,7 @@ function (dojo, declare, bgaHelp) {
 
             // Player cup
             if (playerId == this.player_id) {
+                // FIX 1: Live Score Tracker & River Breakdown - Track all cup cards for current player
                 this.cupCardsCounts[playerId] = { red: 0, orange: 0, green: 0, yellow: 0, purple: 0, black: 0 };
                 var pos = 0;
                 Object.values(playerData.cup || {}).forEach((elem) => {
@@ -517,6 +537,8 @@ function (dojo, declare, bgaHelp) {
                 });
                 this.createCupTooltip();
             } else {
+                // FIX 1: Live Score Tracker & River Breakdown - Track opponent's claimed cup cards
+                // FIX 2: Mandala Missing Colors Indicator - Count hidden vs revealed opponent cup cards
                 this.claimedCupCardsCounts[playerId] = { red: 0, orange: 0, green: 0, yellow: 0, purple: 0, black: 0 };
                 var claimedCards = Object.values(playerData.claimedCup || {});
                 claimedCards.forEach((elem) => {
@@ -876,6 +898,7 @@ function (dojo, declare, bgaHelp) {
         ///////////////////////////////////////////////////
         //// Player's action
 
+        // FIX 3: Undo button - Clear the pending move confirmation state
         clearPendingMove: function(destroyPendingCards = false) {
             if (this.pendingMove) {
                 if (this.pendingMove.domWrapperId && $(this.pendingMove.domWrapperId)) {
@@ -898,6 +921,7 @@ function (dojo, declare, bgaHelp) {
             }
         },
 
+        // FIX 3: Undo button - Undo the pending move and return cards to player's hand
         onUndoPendingMove: function() {
             if (!this.pendingMove) {
                 return;
@@ -977,6 +1001,7 @@ function (dojo, declare, bgaHelp) {
             this.updateMissingColors();
         },
 
+        // FIX 3: Undo button - Confirm the pending move and send action to server
         onConfirmPendingMove: function() {
             if (!this.pendingMove) {
                 return;
@@ -1044,8 +1069,12 @@ function (dojo, declare, bgaHelp) {
             }
 
             var areaSplit = evt.currentTarget.id.split("_");
-            var prefVal = (this.bga && this.bga.userPreferences) ? this.bga.userPreferences.get(101) : (this.prefs && this.prefs[101] ? this.prefs[101].value : 1);
-            var needsConfirm = prefVal != 2 && prefVal != '2';
+            // Same read pattern as preferences 100/103 (both confirmed working). Coerced with
+            // Number() + strict equality as defensive cleanup — removed the dead this.prefs
+            // fallback, which was never populated and could only ever resolve to the "ask for
+            // confirmation" default.
+            var prefVal = this.bga && this.bga.userPreferences ? Number(this.bga.userPreferences.get(101)) : 1;
+            var needsConfirm = prefVal !== 2;
 
             switch(areaSplit[1]) {
                 case 'mountain':
@@ -1063,6 +1092,7 @@ function (dojo, declare, bgaHelp) {
                                 mountainId: mountainId
                             }, this, function(result) {});
                         } else {
+                            // FIX 3: Undo button - Show preview and wait for confirmation
                             var cardDivId = this.playerHand.getItemDivId(card.id);
                             this.mountains['mountain_' + mountainId].addToStockWithId(card.type, card.id, cardDivId);
                             this.playerHand.removeFromStockById(card.id);
@@ -1112,6 +1142,7 @@ function (dojo, declare, bgaHelp) {
                                 fieldId: fieldId
                             }, this, function(result) {});
                         } else {
+                            // FIX 3: Undo button - Show preview and wait for confirmation
                             var targetFieldStock = this.fields['field_' + fieldId][this.player_id];
                             cardsCopy.forEach(c => {
                                 var cardDivId = this.playerHand.getItemDivId(c.id);
@@ -1171,6 +1202,7 @@ function (dojo, declare, bgaHelp) {
                                 cardIds: cardIds
                             }, this, function(result) {});
                         } else {
+                            // FIX 3: Undo button - Show preview and wait for confirmation
                             cardsCopy.forEach(c => {
                                 var cardDivId = this.playerHand.getItemDivId(c.id);
                                 var colorName = this.colors[c.type];
@@ -1516,7 +1548,7 @@ function (dojo, declare, bgaHelp) {
                 this.selectedStock = this.mountains[notif.args.mountain];
                 this.updateStockOverlap();
 
-                // Update river multiplier and slot for live score tracking
+                // FIX 1: Live Score Tracker & River Breakdown - Update river multiplier when card placed
                 var spaceNum = parseInt(notif.args.riverSpace.replace('river_', ''), 10);
                 if (!this.riverMultipliers[playerId]) this.riverMultipliers[playerId] = {};
                 if (!this.riverSlots[playerId]) this.riverSlots[playerId] = {};
@@ -1549,6 +1581,8 @@ function (dojo, declare, bgaHelp) {
                     if (this.cupsColorCounter[playerId] && this.cupsColorCounter[playerId][card.type]) {
                         this.cupsColorCounter[playerId][card.type].incValue(1);
                     }
+                    // FIX 1: Live Score Tracker & River Breakdown - Track cup cards for live score
+                    // FIX 2: Mandala Missing Colors Indicator - Update claimed cup cards count
                     if (this.player_id == playerId) {
                         if (!this.cupCardsCounts[playerId]) this.cupCardsCounts[playerId] = {};
                         this.cupCardsCounts[playerId][card.type] = (this.cupCardsCounts[playerId][card.type] || 0) + 1;
@@ -1689,34 +1723,16 @@ function (dojo, declare, bgaHelp) {
         },
 
         ///////////////////////////////////////////////////
-        //// Live Score Tracker methods
-
-        onPreferenceChange: function(prefId, prefValue) {
-            if (prefId == 102) {
-                var display = (prefValue == 2) ? 'none' : '';
-                dojo.query('.mdl_river_breakdown_panel, .mdl_score_hidden_vp').style('display', display);
-                this.updateLiveScores();
-            } else if (prefId == 103) {
-                var display = (prefValue == 2) ? 'none' : 'flex';
-                dojo.query('.mdl_mandala_missing').style('display', display);
-                this.updateMissingColors();
-            }
-        },
-
-        onLoadingComplete: function() {
-            try {
-                this.setScale();
-                this.updateLiveScores();
-                this.updateMissingColors();
-            } catch (e) {
-                console.error("Error in onLoadingComplete:", e);
-            }
-        },
+        //// Live Score Tracker & Mandala Missing Colors Indicator methods
 
         updateLiveScores: function() {
             try {
                 if (!this.gamedatas || !this.gamedatas.players) return;
-                var prefEnabled = !this.prefs || !this.prefs[102] || this.prefs[102].value != 2;
+                // Score display is a game option (id 100), fixed for the whole table: 1 = End of
+                // game (hide ongoing display), 2 = Ongoing (show it live for both players). This
+                // used to read the dead `this.prefs[102]` (never populated -> always true), which
+                // meant every re-render after the first ignored the setting entirely.
+                var prefEnabled = this.scoreDisplayMode != 1;
                 var isSpectator = this.isSpectator;
 
                 var allPlayerIds = Object.keys(this.gamedatas.players);
@@ -1842,9 +1858,14 @@ function (dojo, declare, bgaHelp) {
         ///////////////////////////////////////////////////
         //// Mandala Missing Colors Indicator methods
 
+        // FIX 2: Mandala Missing Colors Indicator - Show missing colors in each mandala
         updateMissingColors: function() {
+            // Early return if FIX 2 preference is disabled (containers already hidden in setup/onPreferenceChange)
+            if (this.bga.userPreferences.get(103) != 1) {
+                return;
+            }
+
             try {
-                var prefEnabled = !this.prefs || !this.prefs[103] || this.prefs[103].value != 2;
                 var allColors = this.colors || ['red','orange','green','yellow','purple','black'];
 
                 var resolveColor = (val) => {
@@ -1883,11 +1904,6 @@ function (dojo, declare, bgaHelp) {
                 for (var m = 1; m <= 2; m++) {
                     var container = $('mdl_mandala_' + m + '_missing');
                     if (!container) continue;
-
-                    if (!prefEnabled) {
-                        container.style.display = 'none';
-                        continue;
-                    }
 
                     var colorsInMandala = {};
 

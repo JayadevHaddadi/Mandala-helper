@@ -50,6 +50,9 @@ define("DESTROY_MANDALA","destroy_mandala");
 define("TRIGGER_END","trigger_end");
 define("LAST_PLAYER","last_player");
 
+// Score display game option (id 100 in gameoptions.json): 1 = End of game, 2 = Ongoing (live)
+define("SCORE_DISPLAY_MODE","score_display_mode");
+
 // Statistics
 define("TURNS_NUMBER","turns_number");
 define("COMPLETED_MANDALAS","completed_mandalas");
@@ -116,7 +119,7 @@ class Mandalatest extends Table
         // The default below is red/green/blue/orange/brown
         // The number of colors defined here must correspond to the maximum number of players allowed for the gams
         $gameinfos = self::getGameinfos();
-        $default_colors = $gameinfos['player_colors'] ?? array( "ff0000", "008000", "0000ff", "ffa500", "773300" );
+        $default_colors = $gameinfos['player_colors'];
  
         // Create players
         $sql = "INSERT INTO player (player_id, player_color, player_canal, player_name, player_avatar) VALUES ";
@@ -134,6 +137,9 @@ class Mandalatest extends Table
         /************ Start the game initialization *****/
 
         // Init global values with their initial values
+        // Score display: a table-wide game option (chosen at table creation), not a per-player
+        // preference — both players see the same mode. Default 2 (Ongoing/live).
+        self::setGameStateInitialValue(SCORE_DISPLAY_MODE,(int) ($options[100] ?? 2));
         self::setGameStateInitialValue(DESTROY_MANDALA,0);
         self::setGameStateInitialValue(TRIGGER_END,0);
         self::setGameStateInitialValue(LAST_PLAYER,0);
@@ -188,6 +194,7 @@ class Mandalatest extends Table
             }
         }
         // For each player pick 6 cards and put 2 in the player Cup
+        // FIX 2: Mandala Missing Colors Indicator - Track initial cup cards
         $this->ensureInitialCupTable();
         $players = self::loadPlayersBasicInfos();
         foreach ($players as $playerId => $playerInfo) {
@@ -207,6 +214,7 @@ class Mandalatest extends Table
         } else {
             $this->bga->notify->all("dummy",clienttranslate('You receive 6 cards in your hand and 2 for your Cup'), array());
             // Get initial Master Yoga cards
+            // FIX 2: Mandala Missing Colors Indicator - Track Master Yoga initial cup cards
             $myCupCards = $this->cards->pickCardsForLocation(2,DECK,CUP,MASTER_YOGA_ID);
             foreach ($myCupCards as $c) {
                 self::DbQuery("INSERT IGNORE INTO initial_cup (card_id, player_id) VALUES ('{$c['id']}', '" . MASTER_YOGA_ID . "')");
@@ -275,7 +283,9 @@ class Mandalatest extends Table
             $result['players'][$currentPlayerId][CUP] = $this->cards->getCardsInLocation(CUP, $currentPlayerId );
         }
 
-        // Live score tracking & public claimed cup cards for opponent
+        // FIX 1: Live Score Tracker & River Breakdown - Calculate live scores for display
+        // FIX 2: Mandala Missing Colors Indicator - Get opponent's claimed cup cards for color tracking
+        $result['score_display_mode'] = (int) self::getGameStateValue(SCORE_DISPLAY_MODE);
         $result['live_scores'] = $this->getLiveScores($currentPlayerId);
         foreach ($players as $playerId => $playerInfo) {
             if ($playerId != $currentPlayerId) {
@@ -392,6 +402,7 @@ class Mandalatest extends Table
         return array_map('intval', $ids);
     }
 
+    // FIX 1: Live Score Tracker & River Breakdown - Get claimed cup cards (not initial ones)
     public function getPublicClaimedCupCards(int $playerId): array {
         $initialIds = $this->getInitialCupCardIds($playerId);
         $allCupCards = $this->cards->getCardsInLocation(CUP, $playerId);
@@ -404,6 +415,7 @@ class Mandalatest extends Table
         return $claimed;
     }
 
+    // FIX 1: Live Score Tracker & River Breakdown - Calculate live scores with river multipliers
     public function getLiveScores(int $currentPlayerId): array {
         $players = self::loadPlayersBasicInfos();
         if ($this->isSoloMode()) {

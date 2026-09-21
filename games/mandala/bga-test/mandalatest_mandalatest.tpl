@@ -27,12 +27,14 @@
                 </div>
                 <div id="mdl_mandalas" class="mdl_mandalas">
                     <div id="mdl_mandala_1" class="mdl_mandala">
+                        <!-- FIX 2: Mandala Missing Colors Indicator - Display missing colors for mandala 1 -->
                         <div id="mdl_mandala_1_missing" class="mdl_mandala_missing mdl_missing_left"></div>
                         <div id="mdl_field_1_{OPPONENT_ID}_wrapper" class="mdl_field"><div id="mdl_field_1_{OPPONENT_ID}"></div></div>
                         <div id="mdl_mountain_1_wrapper" class="mdl_mountain"><div id="mdl_mountain_1"><div id="mdl_mountain_1_stock" class="mdl_clickable_area"></div></div></div>
                         <div id="mdl_field_1_{PLAYER_ID}_wrapper" class="mdl_field mdl_player"><div id="mdl_field_1_{PLAYER_ID}"><div id="mdl_field_1_{PLAYER_ID}_stock" class="mdl_clickable_area"></div></div></div>
                     </div>
                     <div id="mdl_mandala_2" class="mdl_mandala">
+                        <!-- FIX 2: Mandala Missing Colors Indicator - Display missing colors for mandala 2 -->
                         <div id="mdl_mandala_2_missing" class="mdl_mandala_missing mdl_missing_right"></div>
                         <div id="mdl_field_2_{OPPONENT_ID}_wrapper" class="mdl_field"><div id="mdl_field_2_{OPPONENT_ID}"></div></div>
                         <div id="mdl_mountain_2_wrapper" class="mdl_mountain"><div id="mdl_mountain_2"><div id="mdl_mountain_2_stock" class="mdl_clickable_area"></div></div></div>
@@ -74,6 +76,7 @@ var jstpl_player_panel_cup = '<div class="mdl_player_panel_row mdl_cup_header_ro
                                 <span id="mdl_p${id}_cup_title" class="mdl_panel_cup_title" style="font-weight:bold">${cupTitle}</span> \
                                 <span id="p${id}_cup_nbr" style="display:none;"></span> \
                             </div> \
+                            <!-- FIX 1: Live Score Tracker & River Breakdown - Display river breakdown details --> \
                             <div id="mdl_p${id}_river_breakdown" class="mdl_river_breakdown_panel"></div>';
 
 var jstpl_flip_facedown_back = '<div id="mdl_flip_back" class="mdl_card mdl_facedown_card mdl_flip_back"></div>';

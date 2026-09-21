@@ -48,14 +48,12 @@
     --mdlScale: 1;
 }
 
-/* @media (max-width: 1260px) { */
-@media (max-width: 1385px) {
+@media (max-width: 1500px) {
     :root {
         --mdlScale: 0.9;
     }
 }
-/* @media (max-width: 1160px) { */
-@media (max-width: 1270px) {
+@media (max-width: 1380px) {
     :root {
         --mdlScale: 0.8;
     }
@@ -63,8 +61,7 @@
         margin-top: 9px;
     }    
 }
-/* @media (max-width: 1060px) { */
-@media (max-width: 1155px) {
+@media (max-width: 1260px) {
     :root {
         --mdlScale: 0.7;
     }
@@ -72,7 +69,7 @@
         margin-top: calc(10px * var(--mdlScale));
     }    
 }
-@media (max-width: 1040px) {
+@media (max-width: 1140px) {
     :root {
         --mdlScale: 0.6;
     }
@@ -80,11 +77,12 @@
         margin-top: calc(10px * var(--mdlScale));
     }    
 }
-
-@media (max-width: 993px) {
-    #mdl_table #mdl_game_area {
-        width: calc(993px * var(--mdlScale));
-        display: inline-block;
+@media (max-width: 1020px) {
+    :root {
+        --mdlScale: 0.55;
+    }
+    .mdl_mandala .mdl_mountain {
+        margin-top: calc(10px * var(--mdlScale));
     }    
 }
 
@@ -136,24 +134,41 @@
 #mdl_table {
     text-align: center;
     position: relative;
+    z-index: 1;
     transform-origin: top left;    
 }
 
 #mdl_game_area {
-    /* width: calc(994px * var(--mdlScale)); */
-    width: calc(1105px * var(--mdlScale));
+    width: calc(1220px * var(--mdlScale));
     margin: auto;
-    /* display: inline-block; */
     display: grid;
-    grid-template-columns: 90% 10%;
-    grid-column-gap: 1%;
+    grid-template-columns: calc(994px * var(--mdlScale)) calc(98px * var(--mdlScale));
+    grid-column-gap: calc(68px * var(--mdlScale));
+    padding-left: calc(60px * var(--mdlScale));
+    box-sizing: border-box;
+}
+
+#mdl_game_area.mdl_decks_in_panel {
+    width: calc(1114px * var(--mdlScale));
+    display: block;
+    padding-left: calc(60px * var(--mdlScale));
+    padding-right: calc(60px * var(--mdlScale));
+    box-sizing: border-box;
+}
+
+#mdl_play_area {
+    width: calc(994px * var(--mdlScale));
+    position: relative;
+    margin: auto;
 }
 
 #mdl_playmat {
+    width: calc(994px * var(--mdlScale));
     background-image: url("img/Mandala_Gameboard.jpg");
     background-repeat: no-repeat;
     background-size: contain;
     height: calc(640px * var(--mdlScale));
+    position: relative;
 }
 #mdl_playmat.reverted {
     background-image: url("img/Mandala_Gameboard_reverted.jpg");
@@ -238,6 +253,7 @@
     height: calc(338px * var(--mdlScale));
     width: 50%;
     border: 2px solid transparent;
+    position: relative;
 }
 
 .mdl_mandala.mdl_completed {
@@ -261,6 +277,18 @@
     -webkit-box-shadow: 1px 1px 7px 3px green;
     -o-box-shadow: 1px 1px 7px 3px green;
     box-shadow: 1px 1px 7px 3px green;
+}
+
+/* FIX 3: Undo button - Style for pending move destination preview */
+.mdl_pending_destination {
+    border: calc(3px * var(--mdlScale)) solid #00c0ff !important;
+    -moz-box-shadow: 0 0 14px 4px #00c0ff !important;
+    -webkit-box-shadow: 0 0 14px 4px #00c0ff !important;
+    -o-box-shadow: 0 0 14px 4px #00c0ff !important;
+    box-shadow: 0 0 14px 4px #00c0ff !important;
+}
+.mdl_pending_destination .stockitem_unselectable {
+    cursor: default !important;
 }
 
 .mdl_mountain {
@@ -536,7 +564,7 @@
 
 #mdl_decks_area .mdl_decks_inner .mdl_card_counter {
     position: relative;
-    z-index: 100;
+    z-index: 5;
     left: calc(70px * var(--mdlScale));
     top: calc(-34px * var(--mdlScale));
     font-size: calc(18px * var(--mdlScale));
@@ -761,3 +789,184 @@
     max-height: calc(80vh - 80px);
     overflow: auto;
   }
+
+/* FIX 1: Live Score Tracker & River Breakdown - Display live scores and river multiplier breakdown */
+.mdl_score_hidden_vp {
+    font-size: 12px;
+    font-weight: bold;
+    color: #e67e22;
+    margin-left: 4px;
+}
+
+.mdl_panel_cup_title {
+    font-weight: bold;
+    font-size: 13px;
+    color: #333;
+    padding: 3px 0 3px 0;
+    display: inline-block;
+}
+
+.mdl_river_breakdown_panel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 3px 0 6px 0;
+}
+
+.mdl_rb_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px 3px 4px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.04);
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.mdl_rb_row.mdl_rb_scoring {
+    background: rgba(212, 175, 55, 0.18);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.mdl_card.mdl_rb_card {
+    position: relative !important;
+    width: calc(40px * var(--mdlScale)) !important;
+    height: calc(40px * var(--mdlScale)) !important;
+    min-width: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    display: inline-block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+}
+
+.mdl_rb_formula {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.mdl_rb_scoring .mdl_rb_formula {
+    color: #111;
+    font-weight: 700;
+}
+
+.mdl_rb_pts {
+    font-size: 13px;
+    font-weight: 700;
+    color: #444;
+}
+
+.mdl_rb_scoring .mdl_rb_pts {
+    color: #b8860b;
+    font-weight: 800;
+}
+
+.mdl_rb_row.mdl_rb_unplaced {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(0, 0, 0, 0.18);
+}
+
+.mdl_rb_row.mdl_rb_unplaced .mdl_rb_formula {
+    color: #666;
+}
+
+.mdl_rb_row.mdl_rb_unplaced .mdl_rb_pts {
+    color: #888;
+}
+
+/* FIX 2: Mandala Missing Colors Indicator - Display missing colors in each mandala */
+.mdl_mandala_missing {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.16);
+    border-radius: calc(6px * var(--mdlScale));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+    padding: calc(6px * var(--mdlScale)) calc(5px * var(--mdlScale));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease;
+}
+
+.mdl_missing_left {
+    right: 100%;
+    margin-right: calc(6px * var(--mdlScale));
+    flex-direction: row;
+    gap: calc(5px * var(--mdlScale));
+}
+
+.mdl_missing_right {
+    left: 100%;
+    margin-left: calc(6px * var(--mdlScale));
+    flex-direction: row-reverse;
+    gap: calc(5px * var(--mdlScale));
+}
+
+.mdl_missing_title {
+    font-size: calc(10px * var(--mdlScale));
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: calc(1px * var(--mdlScale));
+    white-space: nowrap;
+    user-select: none;
+}
+
+.mdl_missing_left .mdl_missing_title {
+    -webkit-writing-mode: vertical-rl;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+.mdl_missing_right .mdl_missing_title {
+    -webkit-writing-mode: vertical-rl;
+    writing-mode: vertical-rl;
+}
+
+.mdl_missing_cards {
+    display: flex;
+    flex-direction: column;
+    gap: calc(4px * var(--mdlScale));
+    align-items: center;
+    justify-content: center;
+}
+
+.mdl_card.mdl_missing_card {
+    position: relative !important;
+    width: calc(32px * var(--mdlScale)) !important;
+    height: calc(32px * var(--mdlScale)) !important;
+    min-width: calc(20px * var(--mdlScale));
+    min-height: calc(20px * var(--mdlScale));
+    border-radius: calc(4px * var(--mdlScale));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+    display: block;
+    flex-shrink: 0;
+}
+
+.mdl_missing_complete {
+    color: #27ae60;
+    font-weight: 800;
+    font-size: calc(11px * var(--mdlScale));
+    text-transform: uppercase;
+    letter-spacing: calc(1px * var(--mdlScale));
+    white-space: nowrap;
+    user-select: none;
+    padding: calc(4px * var(--mdlScale)) calc(2px * var(--mdlScale));
+}
+
+.mdl_missing_left .mdl_missing_complete {
+    -webkit-writing-mode: vertical-rl;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+.mdl_missing_right .mdl_missing_complete {
+    -webkit-writing-mode: vertical-rl;
+    writing-mode: vertical-rl;
+}

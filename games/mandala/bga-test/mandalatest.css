@@ -279,6 +279,7 @@
     box-shadow: 1px 1px 7px 3px green;
 }
 
+/* FIX 3: Undo button - Style for pending move destination preview */
 .mdl_pending_destination {
     border: calc(3px * var(--mdlScale)) solid #00c0ff !important;
     -moz-box-shadow: 0 0 14px 4px #00c0ff !important;
@@ -789,7 +790,7 @@
     overflow: auto;
   }
 
-/* Live Score Tracker - River Breakdown & VP */
+/* FIX 1: Live Score Tracker & River Breakdown - Display live scores and river multiplier breakdown */
 .mdl_score_hidden_vp {
     font-size: 12px;
     font-weight: bold;
@@ -876,7 +877,7 @@
     color: #888;
 }
 
-/* Mandala Missing Colors Indicators */
+/* FIX 2: Mandala Missing Colors Indicator - Display missing colors in each mandala */
 .mdl_mandala_missing {
     position: absolute;
     top: 50%;

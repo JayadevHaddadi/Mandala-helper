@@ -1,1 +1,18 @@
-{}
+{
+    "100": {
+        "name": "Score display",
+        "values": {
+            "1": {
+                "name": "End of game",
+                "description": "Victory points are only revealed when the game ends, as in the physical game",
+                "tmdisplay": "Score at end of game"
+            },
+            "2": {
+                "name": "Ongoing",
+                "description": "Live running score is shown for both players throughout the game",
+                "tmdisplay": "Live ongoing score"
+            }
+        },
+        "default": 2
+    }
+}
