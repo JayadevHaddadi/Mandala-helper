@@ -1830,26 +1830,44 @@ function (dojo, declare, bgaHelp) {
                     var rbContainer = $('mdl_p' + playerId + '_river_breakdown');
                     if (rbContainer) {
                         var rbHtml = '';
-                        breakdown.forEach((item) => {
-                            var colorCap = item.color.charAt(0).toUpperCase() + item.color.slice(1);
-                            var rowClass = 'mdl_rb_row mdl_rb_slot_' + item.slot;
-                            rbHtml += '<div class="' + rowClass + '" title="' + _(colorCap) + '">';
-                            rbHtml += '<div class="mdl_card shadow mdl_' + item.color + '_card mdl_rb_card"></div>';
-                            rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x River ' + item.multiplier + ' = <span class="mdl_rb_pts">' + item.pts + '</span></span>';
-                            rbHtml += '</div>';
-                        });
 
-                        // Render cards in cup not in river yet (for ourselves)
-                        unplaced.forEach((item) => {
-                            var colorCap = item.color.charAt(0).toUpperCase() + item.color.slice(1);
-                            rbHtml += '<div class="mdl_rb_row mdl_rb_unplaced" title="' + _(colorCap) + ' (' + _('not in river yet') + ')">';
-                            rbHtml += '<div class="mdl_card shadow mdl_' + item.color + '_card mdl_rb_card"></div>';
-                            rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x ' + _('not in river') + ' = <span class="mdl_rb_pts">0</span></span>';
+                        if (prefEnabled) {
+                            // Ongoing mode: full river-ordered point breakdown
+                            breakdown.forEach((item) => {
+                                var colorCap = item.color.charAt(0).toUpperCase() + item.color.slice(1);
+                                var rowClass = 'mdl_rb_row mdl_rb_slot_' + item.slot;
+                                rbHtml += '<div class="' + rowClass + '" title="' + _(colorCap) + '">';
+                                rbHtml += '<div class="mdl_card shadow mdl_' + item.color + '_card mdl_rb_card"></div>';
+                                rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x River ' + item.multiplier + ' = <span class="mdl_rb_pts">' + item.pts + '</span></span>';
+                                rbHtml += '</div>';
+                            });
+
+                            // Render cards in cup not in river yet (for ourselves)
+                            unplaced.forEach((item) => {
+                                var colorCap = item.color.charAt(0).toUpperCase() + item.color.slice(1);
+                                rbHtml += '<div class="mdl_rb_row mdl_rb_unplaced" title="' + _(colorCap) + ' (' + _('not in river yet') + ')">';
+                                rbHtml += '<div class="mdl_card shadow mdl_' + item.color + '_card mdl_rb_card"></div>';
+                                rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x ' + _('not in river') + ' = <span class="mdl_rb_pts">0</span></span>';
+                                rbHtml += '</div>';
+                            });
+                        } else {
+                            // End of game mode: simple per-color card count, no points/formulas —
+                            // matches the original pre-live-score panel. Only counts are shown;
+                            // real scoring only happens once, at game end.
+                            rbHtml += '<div class="mdl_rb_simple_grid">';
+                            this.colors.forEach((color) => {
+                                var colorCap = color.charAt(0).toUpperCase() + color.slice(1);
+                                var cnt = counts[color] || 0;
+                                rbHtml += '<div class="mdl_rb_simple_item" title="' + _(colorCap) + '">';
+                                rbHtml += '<div class="mdl_card shadow mdl_' + color + '_card mdl_rb_card"></div>';
+                                rbHtml += '<span class="mdl_rb_simple_count">' + cnt + '</span>';
+                                rbHtml += '</div>';
+                            });
                             rbHtml += '</div>';
-                        });
+                        }
 
                         rbContainer.innerHTML = rbHtml;
-                        rbContainer.style.display = prefEnabled ? 'flex' : 'none';
+                        rbContainer.style.display = 'flex';
                     }
                 });
             } catch (e) {

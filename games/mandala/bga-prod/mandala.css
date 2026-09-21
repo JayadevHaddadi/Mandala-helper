@@ -877,6 +877,31 @@
     color: #888;
 }
 
+/* Score display: End of game mode - simple per-color card counts, no points/formulas */
+.mdl_rb_simple_grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    width: 100%;
+}
+
+.mdl_rb_simple_item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 4px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid transparent;
+}
+
+.mdl_rb_simple_count {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+}
+
 /* FIX 2: Mandala Missing Colors Indicator - Display missing colors in each mandala */
 .mdl_mandala_missing {
     position: absolute;
