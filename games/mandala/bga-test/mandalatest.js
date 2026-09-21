@@ -1850,10 +1850,10 @@ function (dojo, declare, bgaHelp) {
                                 rbHtml += '<span class="mdl_rb_formula">' + item.count + ' x ' + _('not in river') + ' = <span class="mdl_rb_pts">0</span></span>';
                                 rbHtml += '</div>';
                             });
-                        } else {
-                            // End of game mode: simple per-color card count, no points/formulas —
-                            // matches the original pre-live-score panel. Only counts are shown;
-                            // real scoring only happens once, at game end.
+                        } else if (isMe) {
+                            // End of game mode, own cup only: simple per-color card count, no
+                            // points/formulas — matches the original pre-live-score panel. Real
+                            // scoring only happens once, at game end.
                             rbHtml += '<div class="mdl_rb_simple_grid">';
                             this.colors.forEach((color) => {
                                 var colorCap = color.charAt(0).toUpperCase() + color.slice(1);
@@ -1865,9 +1865,11 @@ function (dojo, declare, bgaHelp) {
                             });
                             rbHtml += '</div>';
                         }
+                        // End of game mode, opponent/spectator view: no breakdown at all — just
+                        // the card-count title set above ("X cards" / "X cards + N hidden").
 
                         rbContainer.innerHTML = rbHtml;
-                        rbContainer.style.display = 'flex';
+                        rbContainer.style.display = (prefEnabled || isMe) ? 'flex' : 'none';
                     }
                 });
             } catch (e) {
