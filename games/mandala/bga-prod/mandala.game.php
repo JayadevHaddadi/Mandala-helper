@@ -100,7 +100,8 @@ class Mandala extends Table
             TRIGGER_END => 11,
             LAST_PLAYER => 12,
             MASTER_YOGA_TURN => 13,
-            MASTER_YOGA_CLAIMED_CARDS => 14
+            MASTER_YOGA_CLAIMED_CARDS => 14,
+            SCORE_DISPLAY_MODE => 15
         ) );
 
         $this->cards = $this->bga->deckFactory->createDeck( "card" );
