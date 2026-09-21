@@ -233,9 +233,11 @@ function (dojo, declare, bgaHelp) {
             requestAnimationFrame(() => {
                 // Score display is now a table-wide game option (gamedatas.score_display_mode),
                 // not per-player preference 102 — everyone at the table sees the same mode.
-                if (this.scoreDisplayMode != 1) {
-                    this.updateLiveScores();
-                }
+                // Always call this: it renders the cup title/card-count breakdown unconditionally
+                // (public info either way) and only internally gates the score total/river
+                // breakdown/hidden-VP badge on scoreDisplayMode. Gating the call itself here would
+                // leave the cup panel unrendered on first load in "End of game" mode.
+                this.updateLiveScores();
                 if (this.bga.userPreferences.get(103) == 1) {
                     this.updateMissingColors();
                 } else {
