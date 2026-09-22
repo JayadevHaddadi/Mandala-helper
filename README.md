@@ -30,7 +30,6 @@ Mandala-helper/
     │
     ├── mandala/                        # [Mandala] (Legacy Dojo Template)
     │   ├── bga-prod/                   # Production BGA codebase (mandala)
-    │   ├── bga-test/                   # Studio test sandbox (mandalatest)
     │   └── chrome-extension/           # Mandala Point Counter & HUD Chrome Extension
     │
     └── lordsofscotland/                # [Lords of Scotland] (Upcoming Game)
@@ -48,9 +47,6 @@ A single, fast delta-sync script replaces all individual sync scripts. It compar
 ```bash
 # Push Fight (syncs games/pushfight/bga -> remote pushfighttest)
 python tools/sync.py pushfighttest
-
-# Mandala Test Sandbox (syncs games/mandala/bga-test -> remote mandalatest)
-python tools/sync.py mandalatest
 
 # Mandala Production (syncs games/mandala/bga-prod -> remote mandala)
 python tools/sync.py mandala
@@ -91,8 +87,7 @@ Place your SFTP login details in `tools/sftp.config.json` (already configured an
 ### 2. Mandala (`games/mandala/`)
 * **Framework**: Legacy Dojo / PHP template.
 * **Components**:
-  * `bga-prod/`: Production release code.
-  * `bga-test/`: Studio testing sandbox.
+  * `bga-prod/`: Production release code (the only codebase now — `bga-test`/`mandalatest` sandbox has been retired).
   * `chrome-extension/`: Standalone browser extension providing a live HUD, 18-card counting probabilities, opponent mystery card odds, and real-time river scoring.
 
 ### 3. Lords of Scotland (`games/lordsofscotland/`)

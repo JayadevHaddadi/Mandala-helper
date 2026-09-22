@@ -5,7 +5,6 @@ Synchronizes local game files to remote BGA Studio SFTP repository.
 
 Usage:
     python tools/sync.py pushfighttest
-    python tools/sync.py mandalatest
     python tools/sync.py mandala
     python tools/sync.py lordsofscotlandtest
     python tools/sync.py pushfighttest --dry-run
@@ -27,7 +26,6 @@ TARGET_MAP = {
     "pushfight": ("games/pushfight/bga", "pushfight"),
     "pushfighttest": ("games/pushfight/bga", "pushfighttest"),
     "mandala": ("games/mandala/bga-prod", "mandala"),
-    "mandalatest": ("games/mandala/bga-test", "mandalatest"),
     "lordsofscotland": ("games/lordsofscotland/bga", "lordsofscotlandtest"),
     "lordsofscotlandtest": ("games/lordsofscotland/bga", "lordsofscotlandtest"),
 }

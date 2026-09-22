@@ -19,7 +19,6 @@ on:
           - lordsofscotlandtest
           - lordsofscotland
           - mandala
-          - mandalatest
 
 jobs:
   deploy:
