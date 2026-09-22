@@ -287,6 +287,7 @@ class Mandala extends Table
         // FIX 1: Live Score Tracker & River Breakdown - Calculate live scores for display
         // FIX 2: Mandala Missing Colors Indicator - Get opponent's claimed cup cards for color tracking
         $result['score_display_mode'] = (int) self::getGameStateValue(SCORE_DISPLAY_MODE);
+        $result['trigger_end'] = (int) self::getGameStateValue(TRIGGER_END);
         $result['live_scores'] = $this->getLiveScores($currentPlayerId);
         foreach ($players as $playerId => $playerInfo) {
             if ($playerId != $currentPlayerId) {

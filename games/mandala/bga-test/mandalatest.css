@@ -663,6 +663,28 @@
     background-color: orange;
  }
 
+/* Persistent "last round" banner - stays visible (unlike the transient head_warning toast)
+   so players who miss the initial notification still know the game is ending soon. */
+.mdl_last_round_banner {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 150;
+    background-color: #c0392b;
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
+    padding: 10px 16px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.mdl_last_round_banner.visible {
+    display: block;
+}
+
 /* Score table */
 .tableWindow th {
     text-align: center;

@@ -25,7 +25,7 @@
                 "name": "Disabled (Fast play)"
             }
         },
-        "default": 2
+        "default": 1
     },
     "103": {
         "name": "Mandala missing colors indicator",

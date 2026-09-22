@@ -246,6 +246,12 @@ function (dojo, declare, bgaHelp) {
                 }
             });
 
+            if (gamedatas.trigger_end >= 1) {
+                // Restore the persistent banner on page load/reload/reconnect - we don't have
+                // the original triggering message stored server-side, so fall back to a generic one.
+                this.showLastRoundBanner();
+            }
+
             if (gamedatas.finalScore != null) {
                 this.scoreDlg = this.displayTableWindow(
                     'finalScoring',
@@ -1391,8 +1397,8 @@ function (dojo, declare, bgaHelp) {
                     // Add new cards to hand
                     notif.args.newCards.forEach((card) => {
                         this.playerHand.addToStockWithId(card.type_arg,card.id,'mdl_draw_deck');
-                    });    
-                });        
+                    });
+                });
             } else {
                 notif.args.newCards.forEach((card) => {
                     this.playerHand.addToStockWithId(card.type_arg,card.id,'mdl_draw_deck');
@@ -1706,7 +1712,21 @@ function (dojo, declare, bgaHelp) {
 
         notif_triggerEnd: function( notif )
         {
-            this.showMessage(_(this.format_string_recursive(notif.log,notif.args)),'warning');
+            var message = _(this.format_string_recursive(notif.log,notif.args));
+            this.showMessage(message,'warning');
+            this.showLastRoundBanner(message);
+        },
+
+        // Shows a persistent red banner announcing the last round, unlike the transient
+        // showMessage toast which fades and is easy to miss. Stays up until the page reloads.
+        showLastRoundBanner: function( message )
+        {
+            var elem = $('mdl_last_round_banner');
+            if (!elem) {
+                return;
+            }
+            elem.innerHTML = message || _("This is the last Mandala - the game is about to end");
+            dojo.addClass(elem,'visible');
         },
 
         notif_finalScore: function( notif )

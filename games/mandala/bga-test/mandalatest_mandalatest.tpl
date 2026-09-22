@@ -9,6 +9,7 @@
 -- See http://en.boardgamearena.com/#!doc/Studio for more information.
 -------
 -->
+<div id="mdl_last_round_banner" class="mdl_last_round_banner"></div>
 <div id="mdl_table">
     <div id="mdl_game_area">
         <div id="mdl_play_area">
