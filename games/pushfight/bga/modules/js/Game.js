@@ -24,7 +24,7 @@ class SoundController {
             osc.type = 'sine';
             osc.frequency.setValueAtTime(220, this.ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 0.12);
-            gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
@@ -42,7 +42,7 @@ class SoundController {
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(160, this.ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(45, this.ctx.currentTime + 0.18);
-            gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
@@ -59,7 +59,7 @@ class SoundController {
             const gain = this.ctx.createGain();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
-            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.11, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
@@ -78,7 +78,7 @@ class SoundController {
                 const gain = this.ctx.createGain();
                 osc.type = 'triangle';
                 osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.25, this.ctx.currentTime + idx * 0.12);
+                gain.gain.setValueAtTime(0.14, this.ctx.currentTime + idx * 0.12);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.35);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
