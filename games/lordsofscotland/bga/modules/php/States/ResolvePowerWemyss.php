@@ -59,7 +59,7 @@ class ResolvePowerWemyss extends GameState
         $playerName = $this->game->getPlayerNameById($activePlayerId);
 
         // Move target to discard
-        Game::DbQuery("UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0 WHERE `card_id` = $target_card_id");
+        Game::DbQuery("UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0, `power_activated` = 0, `persisted` = 0, `copied_clan` = NULL WHERE `card_id` = $target_card_id");
 
         $cardDesc = $target['is_face_up'] ? (Game::CLANS[$target['clan']]['name'] . ' (' . $target['strength'] . ')') : clienttranslate('a face-down card');
 

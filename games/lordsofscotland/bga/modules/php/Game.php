@@ -121,11 +121,6 @@ class Game extends \Bga\GameFramework\Table
         return min(100, (int) round(($maxScore / 40) * 100));
     }
 
-    public function upgradeTableDb($from_version): void
-    {
-        $this->ensureSchema();
-    }
-
     protected function getAllDatas(int $currentPlayerId): array
     {
         $result = [];
@@ -169,6 +164,9 @@ class Game extends \Bga\GameFramework\Table
         $result['hand'] = self::getObjectListFromDb(
             "SELECT `card_id`, `clan`, `strength`, `location_arg` FROM `card` WHERE `location` = 'hand' AND `location_arg` = $currentPlayerId ORDER BY `strength` ASC, `clan` ASC"
         );
+        foreach ($result['hand'] as &$c) {
+            $c['can_activate_power'] = $this->canActivatePower((int)$c['strength'], $c['clan']);
+        }
 
         // Hand counts for all players
         $handCounts = self::getCollectionFromDb(

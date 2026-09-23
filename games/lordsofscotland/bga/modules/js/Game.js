@@ -20,9 +20,11 @@ class PlayerTurn {
             if (extraMuster) {
                 this.bga.statusBar.setTitle(_('${you} may muster another clan card from your hand (Clan Makgill power)'));
                 if (typeof this.bga.statusBar.addActionButton === 'function') {
-                    this.bga.statusBar.addActionButton('btnPassExtraMuster', _('Pass (Skip extra muster)'), () => {
-                        this.bga.actions.performAction('actPass', {});
-                    }, 'secondary');
+                    this.bga.statusBar.addActionButton(
+                        _('Pass (Skip extra muster)'),
+                        () => this.bga.actions.performAction('actPass', {}),
+                        { color: 'secondary' }
+                    );
                 }
             } else if (!args.can_recruit) {
                 this.bga.statusBar.setTitle(_('${you} must muster a clan card from your hand into your army (Hand full)'));
@@ -470,7 +472,8 @@ export class Game {
         `;
 
         if (context === 'hand') {
-            const canPower = card.can_activate_power;
+            const canPower = Boolean(card.can_activate_power);
+            el.dataset.canPower = canPower ? '1' : '0';
             const powerBadge = document.createElement('div');
             powerBadge.className = `los-power-status-badge ${canPower ? 'power-ready' : 'power-dormant'}`;
             powerBadge.textContent = canPower ? '⚡ Power Active' : 'Normal Play';
@@ -554,7 +557,7 @@ export class Game {
         this.clearActionButtons();
 
         const clanInfo = this.gamedatas.clans[card.clan] || { name: card.clan, power: '' };
-        const canPower = card.can_activate_power;
+        const canPower = cardEl ? (cardEl.dataset.canPower === '1') : Boolean(card.can_activate_power);
 
         this.bga.statusBar.addActionButton(
             canPower 
@@ -588,6 +591,9 @@ export class Game {
                 el.classList.add('highlight-action');
                 el.onclick = () => {
                     if (!this.isCurrentPlayerActive()) return;
+                    this.selectedHandCardId = null;
+                    document.querySelectorAll('#los-hand-cards .los-card.selected').forEach(c => c.classList.remove('selected'));
+                    this.clearActionButtons();
                     const cardId = parseInt(el.dataset.cardId, 10);
                     this.bga.actions.performAction('actRecruit', { card_id: cardId });
                 };
@@ -598,6 +604,25 @@ export class Game {
     }
 
     highlightHandCards(canMuster, handCards) {
+        if (Array.isArray(handCards)) {
+            const powerMap = {};
+            handCards.forEach(c => {
+                powerMap[c.card_id] = Boolean(c.can_activate_power);
+            });
+            document.querySelectorAll('#los-hand-cards .los-card').forEach(el => {
+                const cardId = parseInt(el.dataset.cardId, 10);
+                if (cardId in powerMap) {
+                    const canPower = powerMap[cardId];
+                    el.dataset.canPower = canPower ? '1' : '0';
+                    const badge = el.querySelector('.los-power-status-badge');
+                    if (badge) {
+                        badge.className = `los-power-status-badge ${canPower ? 'power-ready' : 'power-dormant'}`;
+                        badge.textContent = canPower ? '⚡ Power Active' : 'Normal Play';
+                    }
+                }
+            });
+        }
+
         document.querySelectorAll('#los-hand-cards .los-card').forEach(el => {
             el.classList.remove('highlight-action');
             if (canMuster) {
@@ -864,7 +889,7 @@ export class Game {
 
     async notif_newSkirmishStarted(notif) {
         const args = this._getNotifArgs(notif);
-        const { skirmish_num, winner_id } = args;
+        const { skirmish_num, winner_id, recruit, supporters, armies, lowest_face_up } = args;
         const skirmishEl = document.getElementById('los-skirmish-val');
         if (skirmishEl) skirmishEl.textContent = `#${skirmish_num}`;
 
@@ -872,10 +897,20 @@ export class Game {
         if (roundEl) roundEl.textContent = `1 / 5`;
 
         const lowestEl = document.getElementById('los-lowest-val');
-        if (lowestEl) lowestEl.textContent = '-';
+        if (lowestEl) lowestEl.textContent = (lowest_face_up !== null && lowest_face_up !== undefined) ? lowest_face_up : '-';
 
         this.gamedatas.victor_initiative = winner_id;
         this.updateVictorInitiativeBadge();
+
+        if (recruit) {
+            this.renderRecruitRow(recruit);
+        }
+        if (supporters) {
+            this.renderSupporterRow(supporters);
+        }
+        if (armies) {
+            this.renderArmies(armies);
+        }
     }
 
     async notif_powerWemyssUsed(notif) {

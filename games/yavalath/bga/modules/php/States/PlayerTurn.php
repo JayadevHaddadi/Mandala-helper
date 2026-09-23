@@ -43,7 +43,7 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actPlaceStone(int $q, int $r, int $activePlayerId, array $args): string
+    public function actPlaceStone(int $q, int $r, int $activePlayerId): string
     {
         $color = $this->game->placeStone($q, $r, $activePlayerId);
         $result = $this->game->evaluateMove($q, $r, $color);
@@ -53,7 +53,7 @@ class PlayerTurn extends GameState
         $playerName = $this->game->loadPlayersBasicInfos()[$activePlayerId]['player_name'];
 
         // Notify stone placement
-        $this->game->notifyAllPlayers('stonePlaced', client_translate('${player_name} placed a stone at (${q}, ${r})'), [
+        $this->game->notifyAllPlayers('stonePlaced', clienttranslate('${player_name} placed a stone at (${q}, ${r})'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'q' => $q,
@@ -71,16 +71,29 @@ class PlayerTurn extends GameState
         }
 
         if ($result['status'] === 'lose') {
-            // In 2-player, the other player wins
             $allPlayers = array_keys($this->game->loadPlayersBasicInfos());
-            $otherPlayers = array_values(array_diff($allPlayers, [$activePlayerId]));
-            $winnerId = !empty($otherPlayers) ? (int) $otherPlayers[0] : 0;
+            $eliminated = $this->globals->get('eliminated_players', []);
+            if (!in_array($activePlayerId, $eliminated, true)) {
+                $eliminated[] = $activePlayerId;
+                $this->globals->set('eliminated_players', $eliminated);
+            }
 
-            $this->globals->set('winner_id', $winnerId);
-            $this->globals->set('loser_id', $activePlayerId);
-            $this->globals->set('end_reason', 'lose_by_three');
-            $this->tableStats->inc('win_by_opponent_three', 1);
-            return EndScore::class;
+            $survivors = array_values(array_diff($allPlayers, $eliminated));
+            if (count($survivors) <= 1) {
+                $winnerId = !empty($survivors) ? (int) $survivors[0] : 0;
+                $this->globals->set('winner_id', $winnerId);
+                $this->globals->set('loser_id', $activePlayerId);
+                $this->globals->set('end_reason', 'lose_by_three');
+                $this->tableStats->inc('win_by_opponent_three', 1);
+                return EndScore::class;
+            }
+
+            // In 3-player games, player is eliminated but remaining players continue
+            $this->game->notifyAllPlayers('playerEliminated', clienttranslate('${player_name} formed 3-in-a-row and is eliminated from the game!'), [
+                'player_id' => $activePlayerId,
+                'player_name' => $playerName,
+            ]);
+            return NextPlayer::class;
         }
 
         if ($result['status'] === 'draw') {
@@ -95,12 +108,21 @@ class PlayerTurn extends GameState
     public function zombie(int $playerId): string
     {
         $allPlayers = array_keys($this->game->loadPlayersBasicInfos());
-        $surviving = array_values(array_diff($allPlayers, [$playerId]));
-        if (!empty($surviving)) {
-            $winnerId = (int) $surviving[0];
-            $this->bga->playerScore->set($winnerId, 1);
-            $this->bga->playerScore->set($playerId, 0);
+        $eliminated = $this->globals->get('eliminated_players', []);
+        if (!in_array($playerId, $eliminated, true)) {
+            $eliminated[] = $playerId;
+            $this->globals->set('eliminated_players', $eliminated);
         }
-        return EndScore::class;
+
+        $survivors = array_values(array_diff($allPlayers, $eliminated));
+        if (count($survivors) <= 1) {
+            $winnerId = !empty($survivors) ? (int) $survivors[0] : 0;
+            $this->globals->set('winner_id', $winnerId);
+            $this->globals->set('loser_id', $playerId);
+            $this->globals->set('end_reason', 'zombie_forfeit');
+            return EndScore::class;
+        }
+
+        return NextPlayer::class;
     }
 }

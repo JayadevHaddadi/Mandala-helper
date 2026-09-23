@@ -119,10 +119,21 @@ export default class Game {
         return null;
     }
 
+    getCurrentPlayerId() {
+        if (this.bga?.players && typeof this.bga.players.getCurrentPlayerId === 'function') {
+            return this.bga.players.getCurrentPlayerId();
+        }
+        if (typeof gameui !== 'undefined' && gameui.player_id) {
+            return Number(gameui.player_id);
+        }
+        return 0;
+    }
+
     setup(gamedatas) {
         this.HEX_RADIUS = gamedatas.hex_radius || 4;
         this.boardData = gamedatas.board || {};
         this.playerColors = gamedatas.player_colors || {};
+        this.eliminatedPlayers = gamedatas.eliminated_players || [];
 
         this.initDom();
         this.renderBoard();
@@ -243,7 +254,7 @@ export default class Game {
         if (!ghost || (stone && stone.style.display !== 'none')) return;
 
         if (isHover) {
-            const myId = this.bga?.players?.getCurrentPlayerId?.() || 0;
+            const myId = this.getCurrentPlayerId();
             const myColor = this.playerColors[myId] || 'white';
             ghost.className = `yavalath_ghost_stone yavalath_ghost_${myColor}`;
             ghost.style.display = 'block';
@@ -308,6 +319,14 @@ export default class Game {
                 });
             } else {
                 sounds.playPlace();
+            }
+        });
+
+        this.bga.notifications.subscribe('playerEliminated', (notif) => {
+            sounds.playPlace();
+            const eliminatedId = notif.args.player_id;
+            if (!this.eliminatedPlayers.includes(eliminatedId)) {
+                this.eliminatedPlayers.push(eliminatedId);
             }
         });
 

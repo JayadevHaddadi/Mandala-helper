@@ -74,6 +74,10 @@ class ResolvePowerCockburn extends GameState
 
     public function zombie(int $playerId): string
     {
+        $supporter = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'supporter' LIMIT 1");
+        if ($supporter) {
+            return $this->actChooseSupporterSwap((int)$supporter['card_id'], $playerId);
+        }
         return NextPlayer::class;
     }
 

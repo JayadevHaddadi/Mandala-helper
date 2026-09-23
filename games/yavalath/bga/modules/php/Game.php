@@ -58,7 +58,7 @@ class Game extends \Bga\GameFramework\Table
         } catch (\Exception $e) {}
     }
 
-    public function upgradeTableDb($from_version): void
+    public function upgradeTableDb($from_version)
     {
         $this->ensureSchema();
     }
@@ -111,6 +111,7 @@ class Game extends \Bga\GameFramework\Table
 
         $this->globals->set('turn_count', 1);
         $this->globals->set('player_colors', $playerColors);
+        $this->globals->set('eliminated_players', []);
         $this->globals->set('winner_id', 0);
         $this->globals->set('loser_id', 0);
         $this->globals->set('end_reason', '');
@@ -125,12 +126,13 @@ class Game extends \Bga\GameFramework\Table
         return PlayerTurn::class;
     }
 
-    public function getAllDatas(): array
+    protected function getAllDatas(): array
     {
         $result = [];
         $result['players'] = $this->loadPlayersBasicInfos();
         $result['board'] = $this->getBoardState();
         $result['player_colors'] = $this->globals->get('player_colors', []);
+        $result['eliminated_players'] = $this->globals->get('eliminated_players', []);
         $result['hex_radius'] = self::HEX_RADIUS;
         $result['turn_count'] = (int) $this->globals->get('turn_count', 1);
         return $result;
@@ -163,12 +165,12 @@ class Game extends \Bga\GameFramework\Table
     public function placeStone(int $q, int $r, int $playerId): string
     {
         if (!$this->isValidCoord($q, $r)) {
-            throw new UserException(client_translate("Invalid coordinate."));
+            throw new UserException(clienttranslate("Invalid coordinate."));
         }
 
         $existing = $this->getUniqueValueFromDb("SELECT `color` FROM `board` WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
         if ($existing !== null) {
-            throw new UserException(client_translate("This cell is already occupied."));
+            throw new UserException(clienttranslate("This cell is already occupied."));
         }
 
         $playerColors = $this->globals->get('player_colors', []);

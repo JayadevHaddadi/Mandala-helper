@@ -37,6 +37,7 @@ class PlayerTurn extends GameState
             'empty_cells' => $this->game->getEmptyCells(),
             'placed_this_turn' => $placedThisTurn,
             'remaining_colors' => $remainingColors,
+            'all_colors' => $allColors,
             'pie_rule_available' => $pieRuleAvailable,
             'scores' => $this->game->calculateAllScores(),
         ];
@@ -61,6 +62,12 @@ class PlayerTurn extends GameState
         $placedThisTurn[] = $color;
         $this->globals->set('placed_this_turn', $placedThisTurn);
 
+        $placedCoords = $this->globals->get('placed_coords_this_turn', []);
+        $placedCoords[] = ['q' => $q, 'r' => $r, 'color' => $color];
+        $this->globals->set('placed_coords_this_turn', $placedCoords);
+
+        $remainingColors = array_values(array_diff($allColors, $placedThisTurn));
+
         // Notify table
         $this->game->notifyAllPlayers('stonePlaced', client_translate('${player_name} placed a ${color} stone at (${q}, ${r})'), [
             'player_id' => $activePlayerId,
@@ -69,18 +76,50 @@ class PlayerTurn extends GameState
             'r' => $r,
             'color' => $color,
             'placed_this_turn' => $placedThisTurn,
+            'remaining_colors' => $remainingColors,
             'scores' => $this->game->calculateAllScores(),
         ]);
 
         // Check if turn complete
-        $remainingColors = array_diff($allColors, $placedThisTurn);
         if (empty($remainingColors)) {
             // Turn finished
             $this->globals->set('placed_this_turn', []);
+            $this->globals->set('placed_coords_this_turn', []);
             return NextPlayer::class;
         }
 
         // Still more stones to place this turn
+        return null;
+    }
+
+    #[PossibleAction]
+    public function actUndoTurn(int $activePlayerId, array $args): ?string
+    {
+        $placedCoords = $this->globals->get('placed_coords_this_turn', []);
+        if (empty($placedCoords)) {
+            throw new UserException(client_translate("No stones placed this turn to reset."));
+        }
+
+        foreach ($placedCoords as $pt) {
+            $q = (int) $pt['q'];
+            $r = (int) $pt['r'];
+            static::DbQuery("UPDATE `board` SET `color` = NULL, `player_id` = NULL WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
+        }
+
+        $this->globals->set('placed_this_turn', []);
+        $this->globals->set('placed_coords_this_turn', []);
+
+        $allColors = $this->game->getActiveColorsInGame();
+
+        $this->game->notifyAllPlayers('turnReset', client_translate('${player_name} reset their turn placements'), [
+            'player_id' => $activePlayerId,
+            'player_name' => $this->game->loadPlayersBasicInfos()[$activePlayerId]['player_name'],
+            'cleared' => $placedCoords,
+            'remaining_colors' => $allColors,
+            'placed_this_turn' => [],
+            'scores' => $this->game->calculateAllScores(),
+        ]);
+
         return null;
     }
 

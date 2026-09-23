@@ -113,8 +113,9 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actMuster(int $card_id, bool $face_up, int $activePlayerId): string
+    public function actMuster(int $card_id, bool|int $face_up, int $activePlayerId): string
     {
+        $face_up = (bool) $face_up;
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $card_id AND `location` = 'hand' AND `location_arg` = $activePlayerId");
         if (!$card) {
             throw new UserException(clienttranslate('This card is not in your hand'));
@@ -261,6 +262,15 @@ class PlayerTurn extends GameState
     #[PossibleAction]
     public function actPass(int $activePlayerId): string
     {
+        $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
+        $handCount = (int) Game::getUniqueValueFromDb(
+            "SELECT COUNT(*) FROM `card` WHERE `location` = 'hand' AND `location_arg` = $activePlayerId"
+        );
+        if (!$extraMuster && $handCount > 0) {
+            throw new UserException(clienttranslate('You cannot pass your turn. You must recruit a card or muster a clan'));
+        }
+
+        $this->game->globals->set('extra_muster_active', 0);
         $playerName = $this->game->getPlayerNameById($activePlayerId);
         $this->notify->all("playerPassed", clienttranslate('${player_name} passes their turn'), [
             'player_id' => $activePlayerId,
@@ -271,9 +281,14 @@ class PlayerTurn extends GameState
 
     public function zombie(int $playerId): string
     {
+        $this->game->globals->set('extra_muster_active', 0);
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'hand' AND `location_arg` = $playerId LIMIT 1");
         if ($card) {
             return $this->actMuster((int)$card['card_id'], false, $playerId);
+        }
+        $recruit = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'recruit' LIMIT 1");
+        if ($recruit) {
+            return $this->actRecruit((int)$recruit['card_id'], $playerId);
         }
         return NextPlayer::class;
     }

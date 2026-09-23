@@ -17,6 +17,7 @@ class NextPlayer extends GameState
             $game,
             id: 20,
             type: StateType::GAME,
+            updateGameProgression: true,
         );
     }
 
@@ -28,7 +29,17 @@ class NextPlayer extends GameState
         $turnCount = (int) $this->globals->get('turn_count', 1);
         $this->globals->set('turn_count', $turnCount + 1);
 
+        $eliminated = $this->globals->get('eliminated_players', []);
+        $allPlayers = array_keys($this->game->loadPlayersBasicInfos());
+        $maxAttempts = count($allPlayers);
+
         $nextPlayerId = (int) $this->game->activeNextPlayer();
+        $attempts = 0;
+        while (in_array($nextPlayerId, $eliminated, true) && $attempts < $maxAttempts) {
+            $nextPlayerId = (int) $this->game->activeNextPlayer();
+            $attempts++;
+        }
+
         $this->game->giveExtraTime($nextPlayerId);
 
         return PlayerTurn::class;

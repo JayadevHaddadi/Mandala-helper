@@ -22,20 +22,16 @@ class NextPlayer extends GameState
 
     public function onEnteringState(): string
     {
-        $players = array_keys($this->game->loadPlayersBasicInfos());
-        $numPlayers = count($players);
+        $activePlayerId = (int) $this->game->getActivePlayerId();
+        $this->playerStats->inc('turns_number', 1, $activePlayerId);
+
         $colorsPerTurn = count($this->game->getActiveColorsInGame());
         $emptyCount = count($this->game->getEmptyCells());
 
-        // Omega rule: The game ends when it is not possible to complete a full round of turns.
-        // A full round requires: $numPlayers * $colorsPerTurn empty cells.
-        // Also if fewer than $colorsPerTurn remain, the next player cannot even place their stones.
+        // Omega rule: The game ends when it is not possible to complete a turn (fewer empty cells than colors).
         if ($emptyCount < $colorsPerTurn) {
             return EndScore::class;
         }
-
-        $activePlayerId = (int) $this->game->getActivePlayerId();
-        $this->playerStats->inc('turns_number', 1, $activePlayerId);
 
         // Turn count increment
         $turnCount = (int) $this->globals->get('turn_count', 1);

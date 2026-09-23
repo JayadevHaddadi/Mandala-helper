@@ -58,6 +58,25 @@ class SoundController {
         } catch (e) {}
     }
 
+    playReset() {
+        if (this.muted) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(240, this.ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.12);
+        } catch (e) {}
+    }
+
     playChime() {
         if (this.muted) return;
         try {
@@ -102,25 +121,36 @@ class PlayerTurn {
 
         if (active) {
             const remaining = args.remaining_colors || ['white', 'black'];
-            const currentColor = remaining[0];
-            const stepNum = (args.placed_this_turn ? args.placed_this_turn.length : 0) + 1;
-            const totalSteps = stepNum + remaining.length - 1;
+            const placed = args.placed_this_turn || [];
 
-            this.bga.statusBar.setTitle(
-                _('${you} must place a <b>${color}</b> stone (${step}/${total})'),
-                {
-                    color: currentColor.toUpperCase(),
-                    step: stepNum,
-                    total: totalSteps,
-                    i18n: ['color']
-                }
-            );
+            if (remaining.length > 0) {
+                const currentColor = remaining[0];
+                const stepNum = placed.length + 1;
+                const totalSteps = stepNum + remaining.length - 1;
 
-            // Pie Rule swap button
+                this.bga.statusBar.setTitle(
+                    _('${you} must place a <b>${color}</b> stone (${step}/${total})'),
+                    {
+                        color: currentColor.toUpperCase(),
+                        step: stepNum,
+                        total: totalSteps,
+                        i18n: ['color']
+                    }
+                );
+            }
+
+            // Pie Rule swap button (only on turn 2 before any stones placed)
             if (args.pie_rule_available) {
-                this.bga.statusBar.addActionButton('btnSwapColors', _('Swap Colors (Pie Rule)'), () => {
+                this.game.addActionButton('btnSwapColors', _('Swap Colors (Pie Rule)'), () => {
                     this.bga.actions.performAction('actSwapColors', {});
                 }, 'secondary');
+            }
+
+            // Reset turn placements button
+            if (placed.length > 0) {
+                this.game.addActionButton('btnUndoTurn', _('↺ Reset Turn'), () => {
+                    this.bga.actions.performAction('actUndoTurn', {});
+                }, 'danger');
             }
         } else {
             this.bga.statusBar.setTitle(_('${actplayer} is placing stones...'));
@@ -133,7 +163,7 @@ class PlayerTurn {
     }
 }
 
-export default class Game {
+export class Game {
     constructor(bga) {
         this.bga = bga;
         this.HEX_RADIUS = 4;
@@ -141,6 +171,11 @@ export default class Game {
         this.currentArgs = null;
         this.boardData = {};
         this.playerColors = {};
+        this.activeColors = ['white', 'black'];
+
+        // Register State Handlers
+        this.playerTurn = new PlayerTurn(this, bga);
+        this.bga.states.register('PlayerTurn', this.playerTurn);
     }
 
     isCurrentPlayerActive() {
@@ -163,12 +198,27 @@ export default class Game {
         return null;
     }
 
+    addActionButton(id, text, callback, color = 'primary') {
+        if (!this.bga?.statusBar?.addActionButton) return;
+        try {
+            this.bga.statusBar.addActionButton(text, callback, { color: color, id: id });
+        } catch (e) {
+            try {
+                this.bga.statusBar.addActionButton(id, text, callback, color);
+            } catch (e2) {
+                console.warn('Could not add action button:', e2);
+            }
+        }
+    }
+
     setup(gamedatas) {
         this.HEX_RADIUS = gamedatas.hex_radius || 4;
         this.boardData = gamedatas.board || {};
         this.playerColors = gamedatas.player_colors || {};
+        this.activeColors = gamedatas.active_colors || ['white', 'black'];
         this.currentArgs = {
             placed_this_turn: gamedatas.placed_this_turn || [],
+            remaining_colors: this.getRemainingColors(gamedatas.placed_this_turn || []),
             scores: gamedatas.scores || {},
             pie_rule_available: gamedatas.pie_rule_available || false,
         };
@@ -180,8 +230,16 @@ export default class Game {
         this.setupResponsiveScaling();
     }
 
+    getRemainingColors(placed) {
+        placed = placed || [];
+        return this.activeColors.filter(c => !placed.includes(c));
+    }
+
     initDom() {
-        const main = document.getElementById('game_play_area') || document.body;
+        const main = (this.bga?.gameArea?.getElement && this.bga.gameArea.getElement()) ||
+                     document.getElementById('game_play_area') ||
+                     document.body;
+
         main.innerHTML = `
             <div id="omega_container">
                 <div id="omega_score_bar"></div>
@@ -189,6 +247,9 @@ export default class Game {
                     <div id="omega_board_wrapper">
                         <svg id="omega_board_svg"></svg>
                     </div>
+                </div>
+                <div id="omega_attribution">
+                    Designed by <strong>Néstor Romeral Andrés</strong> &bull; Published by <strong>nestorgames</strong>
                 </div>
             </div>
         `;
@@ -226,7 +287,31 @@ export default class Game {
         svg.setAttribute('width', `${svgWidth}`);
         svg.setAttribute('height', `${svgHeight}`);
 
-        let html = '';
+        // Define 3D radial gradients for all stones
+        let html = `
+            <defs>
+                <radialGradient id="omega_grad_white" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="70%" stop-color="#e0e0e0"/>
+                    <stop offset="100%" stop-color="#9e9e9e"/>
+                </radialGradient>
+                <radialGradient id="omega_grad_black" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#555555"/>
+                    <stop offset="70%" stop-color="#212121"/>
+                    <stop offset="100%" stop-color="#000000"/>
+                </radialGradient>
+                <radialGradient id="omega_grad_red" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#ff7b7b"/>
+                    <stop offset="70%" stop-color="#d32f2f"/>
+                    <stop offset="100%" stop-color="#7f0000"/>
+                </radialGradient>
+                <radialGradient id="omega_grad_blue" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#64b5f6"/>
+                    <stop offset="70%" stop-color="#1976d2"/>
+                    <stop offset="100%" stop-color="#0d47a1"/>
+                </radialGradient>
+            </defs>
+        `;
 
         for (let q = -radius; q <= radius; q++) {
             for (let r = -radius; r <= radius; r++) {
@@ -238,7 +323,7 @@ export default class Game {
                     const color = cell ? cell.color : null;
 
                     html += `
-                        <g class="omega_cell" data-q="${q}" data-r="${r}" transform="translate(0, 0)">
+                        <g class="omega_cell" data-q="${q}" data-r="${r}">
                             <polygon class="omega_hex" points="${points}" />
                             <circle class="omega_stone ${color ? 'omega_stone_' + color : ''}"
                                     cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.68).toFixed(1)}"
@@ -256,7 +341,7 @@ export default class Game {
 
         // Add event listeners to cells
         svg.querySelectorAll('.omega_cell').forEach(cellEl => {
-            cellEl.addEventListener('click', (e) => {
+            cellEl.addEventListener('click', () => {
                 const q = parseInt(cellEl.getAttribute('data-q'), 10);
                 const r = parseInt(cellEl.getAttribute('data-r'), 10);
                 this.onCellClick(q, r);
@@ -276,7 +361,7 @@ export default class Game {
         const key = `${q}_${r}`;
         if (this.boardData[key] && this.boardData[key].color) return;
 
-        const remaining = this.currentArgs?.remaining_colors || ['white', 'black'];
+        const remaining = this.currentArgs?.remaining_colors || this.activeColors;
         if (!remaining.length) return;
 
         const colorToPlace = remaining[0];
@@ -297,7 +382,7 @@ export default class Game {
         if (!ghost || (stone && stone.style.display !== 'none')) return;
 
         if (isHover) {
-            const remaining = this.currentArgs?.remaining_colors || ['white', 'black'];
+            const remaining = this.currentArgs?.remaining_colors || this.activeColors;
             if (remaining.length) {
                 const nextColor = remaining[0];
                 ghost.className = `omega_ghost_stone omega_ghost_${nextColor}`;
@@ -364,7 +449,7 @@ export default class Game {
         if (!this.bga?.notifications) return;
 
         this.bga.notifications.subscribe('stonePlaced', (notif) => {
-            const { q, r, color, placed_this_turn, scores } = notif.args;
+            const { q, r, color, placed_this_turn, remaining_colors, scores } = notif.args;
             const key = `${q}_${r}`;
             this.boardData[key] = { q, r, color };
 
@@ -381,12 +466,45 @@ export default class Game {
             }
 
             if (this.currentArgs) {
-                this.currentArgs.placed_this_turn = placed_this_turn;
-                const allColors = ['white', 'black']; // default
-                this.currentArgs.remaining_colors = allColors.filter(c => !placed_this_turn.includes(c));
+                this.currentArgs.placed_this_turn = placed_this_turn || [];
+                this.currentArgs.remaining_colors = remaining_colors || this.getRemainingColors(placed_this_turn);
+                if (this.isCurrentPlayerActive()) {
+                    this.playerTurn.updateControls(this.currentArgs, true);
+                    this.updateBoardInteractions(true);
+                }
             }
 
             sounds.playPlace();
+            this.updateScoresDisplay(scores);
+        });
+
+        this.bga.notifications.subscribe('turnReset', (notif) => {
+            const { cleared, remaining_colors, placed_this_turn, scores } = notif.args;
+            (cleared || []).forEach(pt => {
+                const key = `${pt.q}_${pt.r}`;
+                if (this.boardData[key]) {
+                    this.boardData[key].color = null;
+                }
+                const cell = document.querySelector(`.omega_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
+                if (cell) {
+                    const stone = cell.querySelector('.omega_stone');
+                    if (stone) {
+                        stone.style.display = 'none';
+                        stone.className = 'omega_stone';
+                    }
+                }
+            });
+
+            if (this.currentArgs) {
+                this.currentArgs.placed_this_turn = placed_this_turn || [];
+                this.currentArgs.remaining_colors = remaining_colors || this.activeColors;
+                if (this.isCurrentPlayerActive()) {
+                    this.playerTurn.updateControls(this.currentArgs, true);
+                    this.updateBoardInteractions(true);
+                }
+            }
+
+            sounds.playReset();
             this.updateScoresDisplay(scores);
         });
 
@@ -430,3 +548,5 @@ export default class Game {
         wrapper.style.transform = `scale(${scale})`;
     }
 }
+
+export default Game;

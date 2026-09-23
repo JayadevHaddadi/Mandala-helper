@@ -97,7 +97,7 @@ class ResolvePowerFergusson extends GameState
     public function zombie(int $playerId): string
     {
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
-        $target = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'army' AND `card_id` != $pendingCardId LIMIT 1");
+        $target = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'army' AND `card_id` != $pendingCardId AND `location_arg` != $playerId LIMIT 1");
         if ($target) {
             return $this->actChooseSwap((int)$target['card_id'], $playerId);
         }

@@ -15,12 +15,12 @@ class EndScore extends GameState
     ) {
         parent::__construct(
             $game,
-            id: 99,
-            type: StateType::GAME_END,
+            id: 98,
+            type: StateType::GAME,
         );
     }
 
-    public function onEnteringState(): void
+    public function onEnteringState(): int
     {
         $winnerId = (int) $this->globals->get('winner_id', 0);
         $loserId = (int) $this->globals->get('loser_id', 0);
@@ -39,18 +39,28 @@ class EndScore extends GameState
         $turnCount = (int) $this->globals->get('turn_count', 1);
         $this->tableStats->set('turns_number', $turnCount);
 
-        $msg = client_translate('Game over!');
+        $winnerName = $winnerId ? $this->game->loadPlayersBasicInfos()[$winnerId]['player_name'] : '';
+        $loserName = $loserId ? $this->game->loadPlayersBasicInfos()[$loserId]['player_name'] : '';
+
+        $msg = clienttranslate('Game over!');
         if ($reason === 'win_by_four') {
-            $msg = client_translate('${player_name} completed 4-in-a-row and wins!');
+            $msg = clienttranslate('${player_name} completed 4-in-a-row and wins!');
         } elseif ($reason === 'lose_by_three') {
-            $msg = client_translate('${player_name} formed 3-in-a-row and is defeated!');
+            $msg = clienttranslate('${player_name} wins! (${loser_name} formed 3-in-a-row)');
+        } elseif ($reason === 'board_full_draw') {
+            $msg = clienttranslate('The board is full. The game ends in a draw!');
+        } elseif ($reason === 'zombie_forfeit') {
+            $msg = clienttranslate('${player_name} wins by forfeit!');
         }
 
         $this->game->notifyAllPlayers('endGameScores', $msg, [
             'winner_id' => $winnerId,
             'loser_id' => $loserId,
             'reason' => $reason,
-            'player_name' => $winnerId ? $this->game->loadPlayersBasicInfos()[$winnerId]['player_name'] : '',
+            'player_name' => $winnerName,
+            'loser_name' => $loserName,
         ]);
+
+        return 99;
     }
 }

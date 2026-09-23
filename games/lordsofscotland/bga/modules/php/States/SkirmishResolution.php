@@ -185,10 +185,39 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         // Victor starts next skirmish
         $this->game->gamestate->changeActivePlayer($winnerId);
 
+        $recruitCards = Game::getObjectListFromDb(
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `slot`, `is_face_up` FROM `card` WHERE `location` = 'recruit' ORDER BY `location_arg` ASC"
+        );
+        foreach ($recruitCards as &$c) {
+            if (!$c['is_face_up']) {
+                $c['clan'] = 'hidden';
+                $c['strength'] = 0;
+            }
+        }
+
+        $supporters = Game::getObjectListFromDb(
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` FROM `card` WHERE `location` = 'supporter' ORDER BY `card_id` ASC"
+        );
+
+        $armyCards = Game::getObjectListFromDb(
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up`, `copied_clan`, `persisted`, `round_played` FROM `card` WHERE `location` = 'army' ORDER BY `card_id` ASC"
+        );
+        $armies = [];
+        foreach ($rankings as $r) {
+            $armies[(int)$r['player_id']] = [];
+        }
+        foreach ($armyCards as $c) {
+            $armies[(int)$c['player_id']][] = $c;
+        }
+
         $this->notify->all("newSkirmishStarted", clienttranslate('=== Skirmish #${skirmish_num} begins! Victor\'s Initiative is held by ${winner_name} ==='), [
             'skirmish_num' => $skirmishNum,
             'winner_id' => $winnerId,
             'winner_name' => $winner ? $winner['name'] : '',
+            'recruit' => $recruitCards,
+            'supporters' => $supporters,
+            'armies' => $armies,
+            'lowest_face_up' => $this->game->getLowestFaceUpStrengthInSkirmish(),
         ]);
 
         return PlayerTurn::class;

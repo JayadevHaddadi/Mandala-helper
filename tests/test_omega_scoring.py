@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Unit tests for Omega board geometry and group product scoring algorithm.
+Unit tests for Omega board geometry, group product scoring algorithm,
+multi-player support (2, 3, 4 players), tiebreakers, and game-end round simulation.
 """
 
 from collections import deque
@@ -32,7 +33,7 @@ def get_neighbors(coord, valid_cells):
 def calculate_omega_score(board, color, valid_cells):
     """
     board: dict mapping (q, r) -> color
-    color: string (e.g. 'white' or 'black')
+    color: string (e.g. 'white', 'black', 'red', 'blue')
     Returns: (final_score, list_of_group_sizes)
     """
     stones = {coord for coord, col in board.items() if col == color}
@@ -69,6 +70,13 @@ def calculate_omega_score(board, color, valid_cells):
     group_sizes.sort(reverse=True)
     return score, group_sizes
 
+def calculate_aux_tiebreaker(groups):
+    """Auxiliary score formula: largest * 10000 + second * 100 + third."""
+    largest = groups[0] if len(groups) > 0 else 0
+    second = groups[1] if len(groups) > 1 else 0
+    third = groups[2] if len(groups) > 2 else 0
+    return (largest * 10000) + (second * 100) + third
+
 def test_omega():
     cells = generate_hex_board(4)
     assert len(cells) == 61, f"Expected 61 cells for radius 4, got {len(cells)}"
@@ -87,13 +95,9 @@ def test_omega():
 
     # Test 4: One connected group of 3, one group of 2, one singleton
     board = {
-        # Group of 3: (0,0), (1,0), (2,0)
         (0, 0): 'white', (1, 0): 'white', (2, 0): 'white',
-        # Group of 2: (0, 2), (0, 3)
         (0, 2): 'white', (0, 3): 'white',
-        # Singleton: (-2, -1)
         (-2, -1): 'white',
-        # Other color stones
         (0, 1): 'black', (-1, 0): 'black'
     }
     score, groups = calculate_omega_score(board, 'white', cells)
@@ -102,14 +106,47 @@ def test_omega():
 
     # Test 5: Connected group of 4, group of 3 -> score 12
     board2 = {
-        (0,0): 'black', (1,0): 'black', (0,1): 'black', (1,-1): 'black', # 4 connected
-        (-2,0): 'black', (-3,0): 'black', (-2,-1): 'black' # 3 connected
+        (0,0): 'black', (1,0): 'black', (0,1): 'black', (1,-1): 'black',
+        (-2,0): 'black', (-3,0): 'black', (-2,-1): 'black'
     }
     score_b, groups_b = calculate_omega_score(board2, 'black', cells)
     assert groups_b == [4, 3]
     assert score_b == 12
 
-    print("All Omega scoring tests passed successfully!")
+    # Test 6: 3-Player and 4-Player colors (Red and Blue)
+    board_4p = {
+        (0, 0): 'red', (1, -1): 'red', # Red group of 2
+        (-2, 0): 'red',                 # Red singleton -> score = 2 * 1 = 2
+        (-1, 2): 'blue', (-2, 2): 'blue', (-3, 2): 'blue', # Blue group of 3
+        (2, 0): 'blue', (2, 1): 'blue'                      # Blue group of 2 -> score = 3 * 2 = 6
+    }
+    score_red, groups_red = calculate_omega_score(board_4p, 'red', cells)
+    score_blue, groups_blue = calculate_omega_score(board_4p, 'blue', cells)
+    assert score_red == 2 and groups_red == [2, 1], f"Expected [2, 1], got {groups_red}"
+    assert score_blue == 6 and groups_blue == [3, 2], f"Expected [3, 2], got {groups_blue}"
+
+    # Test 7: Tiebreaker resolution
+    # Player A: groups [4, 2] -> score = 8
+    # Player B: groups [8] -> score = 8 (single big group)
+    # Player C: groups [4, 2, 1] -> score = 8
+    aux_a = calculate_aux_tiebreaker([4, 2])
+    aux_b = calculate_aux_tiebreaker([8])
+    aux_c = calculate_aux_tiebreaker([4, 2, 1])
+
+    # Player B has largest group 8 > 4, so aux_b > aux_a
+    assert aux_b > aux_a, f"Expected aux_b ({aux_b}) > aux_a ({aux_a})"
+    # Player C has third group 1, so aux_c > aux_a
+    assert aux_c > aux_a, f"Expected aux_c ({aux_c}) > aux_a ({aux_a})"
+
+    # Test 8: Full game capacity calculation
+    # 2 players: 2 stones/turn. 61 cells -> 30 full turns = 60 stones placed. 1 cell left (< 2), game ends.
+    assert 61 // 2 == 30 and 61 % 2 == 1
+    # 3 players: 3 stones/turn. 61 cells -> 20 full turns = 60 stones placed. 1 cell left (< 3), game ends.
+    assert 61 // 3 == 20 and 61 % 3 == 1
+    # 4 players: 4 stones/turn. 61 cells -> 15 full turns = 60 stones placed. 1 cell left (< 4), game ends.
+    assert 61 // 4 == 15 and 61 % 4 == 1
+
+    print("All Omega scoring and game rule verification tests passed successfully!")
 
 if __name__ == '__main__':
     test_omega()

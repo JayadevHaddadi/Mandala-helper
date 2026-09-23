@@ -21,7 +21,7 @@
     gap: 16px;
     margin-bottom: 14px;
     padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -36,10 +36,11 @@
 
 .omega_color_pip {
     display: inline-block;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 1px solid #777;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 
 .omega_pip_white {
@@ -131,13 +132,13 @@
 }
 
 .omega_stone_red {
-    fill: #d32f2f;
-    stroke: #8b0000;
+    fill: url(#omega_grad_red);
+    stroke: #7f0000;
     stroke-width: 0.8;
 }
 
 .omega_stone_blue {
-    fill: #1976d2;
+    fill: url(#omega_grad_blue);
     stroke: #0d47a1;
     stroke-width: 0.8;
 }
@@ -170,4 +171,11 @@
     fill: #1976d2;
     stroke: #004;
     stroke-width: 1;
+}
+
+#omega_attribution {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #666;
+    text-align: center;
 }

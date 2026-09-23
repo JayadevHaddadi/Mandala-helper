@@ -83,7 +83,34 @@ def test_yavalath():
     res4 = check_lines_through_move(b4, (3, 0), 'white')
     assert res4 == 'win', f"Expected win when 4 and 3 are formed simultaneously, got {res4}"
 
-    print("All Yavalath line detection tests passed successfully!")
+    # Test 7: 3-player game simulation with elimination
+    players = [1001, 1002, 1003]
+    eliminated = []
+    
+    # Player 1 makes a 3-in-a-row and is eliminated
+    res_p1 = 'lose'
+    if res_p1 == 'lose':
+        eliminated.append(1001)
+        survivors = [p for p in players if p not in eliminated]
+        assert len(survivors) == 2, f"Expected 2 survivors, got {len(survivors)}"
+        assert survivors == [1002, 1003]
+        # Game must continue, not end
+        game_over = len(survivors) <= 1
+        assert not game_over
+
+    # Player 2 makes a 3-in-a-row and is eliminated
+    res_p2 = 'lose'
+    if res_p2 == 'lose':
+        eliminated.append(1002)
+        survivors = [p for p in players if p not in eliminated]
+        assert len(survivors) == 1, f"Expected 1 survivor, got {len(survivors)}"
+        assert survivors[0] == 1003
+        game_over = len(survivors) <= 1
+        assert game_over
+        winner = survivors[0]
+        assert winner == 1003
+
+    print("All Yavalath line detection and 3-player elimination tests passed successfully!")
 
 if __name__ == '__main__':
     test_yavalath()

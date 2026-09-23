@@ -31,9 +31,10 @@ class EndScore extends GameState
             $groups = $data['groups'];
             $largestGroup = !empty($groups) ? (int) $groups[0] : 0;
             $secondGroup = (count($groups) > 1) ? (int) $groups[1] : 0;
+            $thirdGroup = (count($groups) > 2) ? (int) $groups[2] : 0;
 
-            // Auxiliary score for tiebreaking: largest group * 1000 + second largest
-            $auxScore = ($largestGroup * 1000) + $secondGroup;
+            // Auxiliary score for tiebreaking: largest * 10000 + second * 100 + third
+            $auxScore = ($largestGroup * 10000) + ($secondGroup * 100) + $thirdGroup;
 
             $this->bga->playerScore->set($pId, $scoreVal);
             $this->bga->playerScoreAux->set($pId, $auxScore);

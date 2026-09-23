@@ -42,7 +42,6 @@ class Game extends \Bga\GameFramework\Table
         try {
             $cols = static::getObjectListFromDb("SHOW COLUMNS FROM `board` LIKE 'coord_q'");
             if (empty($cols)) {
-                static::DbQuery("DROP TABLE IF EXISTS `board`");
                 static::DbQuery("CREATE TABLE IF NOT EXISTS `board` (
                     `coord_q` smallint(5) NOT NULL,
                     `coord_r` smallint(5) NOT NULL,
@@ -56,7 +55,7 @@ class Game extends \Bga\GameFramework\Table
         }
     }
 
-    public function upgradeTableDb($from_version): void
+    public function upgradeTableDb($from_version)
     {
         $this->ensureSchema();
     }
@@ -77,8 +76,9 @@ class Game extends \Bga\GameFramework\Table
             $hexColor = $default_colors[$idx % count($default_colors)];
             $colName = $colorNames[$idx % count($colorNames)];
             $playerColors[$player_id] = $colName;
-            $query_values[] = vsprintf("(%s, '%s', '%s')", [
+            $query_values[] = vsprintf("(%s, %d, '%s', '%s')", [
                 $player_id,
+                $idx + 1,
                 $hexColor,
                 addslashes($players[$player_id]["player_name"]),
             ]);
@@ -87,7 +87,7 @@ class Game extends \Bga\GameFramework\Table
 
         static::DbQuery(
             sprintf(
-                "INSERT INTO `player` (`player_id`, `player_color`, `player_name`) VALUES %s",
+                "INSERT INTO `player` (`player_id`, `player_no`, `player_color`, `player_name`) VALUES %s",
                 implode(",", $query_values)
             )
         );
@@ -108,10 +108,14 @@ class Game extends \Bga\GameFramework\Table
             static::DbQuery("INSERT INTO `board` (`coord_q`, `coord_r`, `color`, `player_id`) VALUES " . implode(',', $values));
         }
 
+        $pieOption = isset($options[100]) ? (int) $options[100] : (int) $this->getGameStateValue('100', 1);
+        $numPlayers = count($players);
+
         // Global variables initialization
         $this->globals->set('turn_count', 1);
         $this->globals->set('placed_this_turn', []); // list of colors placed so far this turn
-        $this->globals->set('pie_rule_available', (bool) ($this->gameOptions->get(100, 1) === 1));
+        $this->globals->set('placed_coords_this_turn', []); // list of coordinates placed this turn for undo
+        $this->globals->set('pie_rule_available', ($numPlayers === 2 && $pieOption === 1));
         $this->globals->set('pie_rule_used', false);
         $this->globals->set('player_colors', $playerColors);
 
@@ -125,7 +129,7 @@ class Game extends \Bga\GameFramework\Table
         return PlayerTurn::class;
     }
 
-    public function getAllDatas(): array
+    protected function getAllDatas(): array
     {
         $result = [];
         $result['players'] = $this->loadPlayersBasicInfos();
@@ -134,7 +138,9 @@ class Game extends \Bga\GameFramework\Table
         $result['placed_this_turn'] = $this->globals->get('placed_this_turn', []);
         $result['pie_rule_available'] = (bool) $this->globals->get('pie_rule_available', false);
         $result['player_colors'] = $this->globals->get('player_colors', []);
+        $result['active_colors'] = $this->getActiveColorsInGame();
         $result['hex_radius'] = self::HEX_RADIUS;
+        $result['turn_count'] = (int) $this->globals->get('turn_count', 1);
         return $result;
     }
 
@@ -187,8 +193,11 @@ class Game extends \Bga\GameFramework\Table
             throw new UserException(client_translate("Invalid board coordinate."));
         }
 
-        $existing = $this->getUniqueValueFromDb("SELECT `color` FROM `board` WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
-        if ($existing !== null) {
+        $row = static::getObjectFromDb("SELECT `color` FROM `board` WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
+        if (!$row) {
+            throw new UserException(client_translate("Invalid board space."));
+        }
+        if ($row['color'] !== null) {
             throw new UserException(client_translate("This space is already occupied."));
         }
 
@@ -287,8 +296,19 @@ class Game extends \Bga\GameFramework\Table
         $colors[$p2Id] = $temp;
         $this->globals->set('player_colors', $colors);
 
-        static::DbQuery("UPDATE `player` SET `player_color` = '{$colors[$p1Id]}' WHERE `player_id` = '{$p1Id}'");
-        static::DbQuery("UPDATE `player` SET `player_color` = '{$colors[$p2Id]}' WHERE `player_id` = '{$p2Id}'");
+        $colorHexMap = [
+            'white' => 'ffffff',
+            'black' => '222222',
+            'red'   => 'd32f2f',
+            'blue'  => '1976d2',
+        ];
+        $hex1 = $colorHexMap[$colors[$p1Id]] ?? 'ffffff';
+        $hex2 = $colorHexMap[$colors[$p2Id]] ?? '222222';
+
+        static::DbQuery("UPDATE `player` SET `player_color` = '{$hex1}' WHERE `player_id` = '{$p1Id}'");
+        static::DbQuery("UPDATE `player` SET `player_color` = '{$hex2}' WHERE `player_id` = '{$p2Id}'");
+        $this->reloadPlayersBasicInfos();
+
         $this->globals->set('pie_rule_used', true);
         $this->globals->set('pie_rule_available', false);
     }
