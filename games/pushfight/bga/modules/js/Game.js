@@ -194,18 +194,20 @@ export class Game {
         const gameArea = this.bga.gameArea.getElement();
         gameArea.innerHTML = `
             <div id="pft_container" class="pft-container">
-                <div class="pft-board-wrapper">
-                    <!-- Top Side Rail (Row 1, Cols 3..7) -->
-                    <div class="pft-rail pft-rail-top" title="${_('Top Side Rail: Pieces cannot be pushed off here (Cols 3-7)')}">
-                        <span class="pft-rail-label">RAIL</span>
-                    </div>
+                <div id="pft_board_scaler" class="pft-board-scaler">
+                    <div id="pft_board_wrapper" class="pft-board-wrapper">
+                        <!-- Top Side Rail (Row 1, Cols 3..7) -->
+                        <div class="pft-rail pft-rail-top" title="${_('Top Side Rail: Pieces cannot be pushed off here (Cols 3-7)')}">
+                            <span class="pft-rail-label">RAIL</span>
+                        </div>
 
-                    <!-- 26-Square Board Grid -->
-                    <div id="pft_board" class="pft-board"></div>
+                        <!-- 26-Square Board Grid -->
+                        <div id="pft_board" class="pft-board"></div>
 
-                    <!-- Bottom Side Rail (Row 4, Cols 2..6) -->
-                    <div class="pft-rail pft-rail-bottom" title="${_('Bottom Side Rail: Pieces cannot be pushed off here (Cols 2-6)')}">
-                        <span class="pft-rail-label">RAIL</span>
+                        <!-- Bottom Side Rail (Row 4, Cols 2..6) -->
+                        <div class="pft-rail pft-rail-bottom" title="${_('Bottom Side Rail: Pieces cannot be pushed off here (Cols 2-6)')}">
+                            <span class="pft-rail-label">RAIL</span>
+                        </div>
                     </div>
                 </div>
 
@@ -222,6 +224,7 @@ export class Game {
         this.renderPieces();
         this.setupNotifications();
         this.setupTooltips();
+        this.setupResponsiveScaling();
     }
 
     isValidSquare(r, c) {
@@ -946,5 +949,71 @@ export class Game {
         if (phasePill) {
             this.addTooltip(phasePill, _('Turn phase: You may move up to 2 pieces, followed by 1 mandatory push with a square King.'));
         }
+    }
+
+    setupResponsiveScaling() {
+        this.updateBoardScale();
+
+        const container = document.getElementById('pft_container');
+        if (typeof ResizeObserver !== 'undefined' && container) {
+            this._resizeObserver = new ResizeObserver(() => this.updateBoardScale());
+            this._resizeObserver.observe(container);
+        }
+
+        window.addEventListener('resize', () => this.updateBoardScale());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.updateBoardScale(), 150);
+        });
+    }
+
+    updateBoardScale() {
+        const container = document.getElementById('pft_container');
+        const scaler = document.getElementById('pft_board_scaler');
+        const wrapper = document.getElementById('pft_board_wrapper');
+        if (!container || !scaler || !wrapper) return;
+
+        const baseWidth = 590;
+        const baseHeight = 318;
+
+        // Container available width, leaving a tiny 6px safe margin (3px per side)
+        const containerWidth = container.clientWidth || window.innerWidth;
+        const availableWidth = Math.max(260, containerWidth - 6);
+
+        const isMobile = document.body.classList.contains('mobile_version') ||
+                         document.body.classList.contains('touch-device') ||
+                         (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) ||
+                         (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+                         ('ontouchstart' in window);
+
+        let scale = availableWidth / baseWidth;
+
+        if (!isMobile) {
+            // Desktop: keep natural 1.0 (590px), or scale down only if window < 590px
+            scale = Math.min(1.0, scale);
+        } else {
+            // Mobile:
+            // In portrait: use maximum screen width (scale to availableWidth)
+            // In landscape: ensure board fits viewport height so it isn't cropped
+            const availableHeight = window.innerHeight - 170;
+            if (availableHeight > 180) {
+                const heightScale = availableHeight / baseHeight;
+                scale = Math.min(scale, heightScale);
+            }
+            // Cap scale at 1.25 on large tablets
+            scale = Math.min(scale, 1.25);
+        }
+
+        // Avoid unnecessary layout thrashing if scale hasn't changed significantly
+        if (this._currentScale && Math.abs(this._currentScale - scale) < 0.003) {
+            return;
+        }
+        this._currentScale = scale;
+
+        const scaledW = Math.round(baseWidth * scale);
+        const scaledH = Math.round(baseHeight * scale);
+
+        scaler.style.width = `${scaledW}px`;
+        scaler.style.height = `${scaledH}px`;
+        wrapper.style.transform = `scale(${scale})`;
     }
 }

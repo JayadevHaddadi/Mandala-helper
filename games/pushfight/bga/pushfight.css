@@ -12,6 +12,9 @@
     padding: 20px;
     user-select: none;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     /* C.5 Background & extras: a subtle, thematic leather/parchment texture behind
        the play area instead of the platform's flat default, echoing the board's own
        wood and tan tones without competing with the pieces for attention. */
@@ -23,14 +26,39 @@
     border-radius: 16px;
 }
 
+@media (max-width: 768px) {
+    .pft-container {
+        padding: 8px 4px;
+        gap: 10px;
+        border-radius: 10px;
+    }
+}
+
+/* Board Scaler Container — smoothly fits the board to maximum screen width on mobile */
+.pft-board-scaler {
+    position: relative;
+    width: 590px;
+    height: 318px;
+    margin: 0 auto;
+    overflow: visible;
+    max-width: 100%;
+}
+
 /* Board Wrapper with Rails */
 .pft-board-wrapper {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 552px;
+    height: 280px;
     padding: 16px;
     background: linear-gradient(135deg, #422a1d 0%, #2b170e 100%);
     border-radius: 16px;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.15);
     border: 3px solid #5a3923;
+    transform-origin: top left;
+    box-sizing: content-box;
+    will-change: transform;
 }
 
 /* Side Rails */
@@ -364,27 +392,6 @@
     transform: scale(1.08);
 }
 
-/* Responsive scaling for mobile devices and small viewports */
-@media (max-width: 620px) {
-    .pft-board-wrapper {
-        transform: scale(0.85);
-        transform-origin: top center;
-    }
-}
-
-@media (max-width: 520px) {
-    .pft-board-wrapper {
-        transform: scale(0.70);
-        transform-origin: top center;
-    }
-}
-
-@media (max-width: 420px) {
-    .pft-board-wrapper {
-        transform: scale(0.56);
-        transform-origin: top center;
-    }
-}
 
 /* C.4 Sizing & responsiveness: the board was a fixed 536px box that never grew past
    its base size, leaving large screens mostly empty. `zoom` (unlike `transform`)
