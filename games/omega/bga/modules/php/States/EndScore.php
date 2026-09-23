@@ -53,7 +53,7 @@ class EndScore extends GameState
         $this->tableStats->set('winning_score', max(0, $bestScore));
         $this->tableStats->set('turns_number', $turnCount);
 
-        $this->game->notifyAllPlayers('endGameScores', client_translate('Game finished! Final scores computed.'), [
+        $this->game->notifyAllPlayers('endGameScores', clienttranslate('Game finished! Final scores computed.'), [
             'scores' => $scores,
         ]);
 

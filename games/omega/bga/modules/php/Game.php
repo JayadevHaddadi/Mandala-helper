@@ -115,12 +115,17 @@ class Game extends \Bga\GameFramework\Table
         $this->globals->set('turn_count', 1);
         $this->globals->set('placed_this_turn', []); // list of colors placed so far this turn
         $this->globals->set('placed_coords_this_turn', []); // list of coordinates placed this turn for undo
+        $this->globals->set('last_placed_coords', []); // stones placed in previous turn for visual reminder
         $this->globals->set('pie_rule_available', ($numPlayers === 2 && $pieOption === 1));
         $this->globals->set('pie_rule_used', false);
         $this->globals->set('player_colors', $playerColors);
 
         $this->tableStats->init(['turns_number', 'winning_score'], 0);
         $this->playerStats->init(['turns_number', 'final_groups_count', 'largest_group_size'], 0);
+
+        foreach ($playerIds as $pId) {
+            $this->playerScore->set((int)$pId, 0);
+        }
 
         // First player is White
         $p1 = (int) $playerIds[0];
@@ -136,6 +141,7 @@ class Game extends \Bga\GameFramework\Table
         $result['board'] = $this->getBoardState();
         $result['scores'] = $this->calculateAllScores();
         $result['placed_this_turn'] = $this->globals->get('placed_this_turn', []);
+        $result['last_placed_coords'] = $this->globals->get('last_placed_coords', []);
         $result['pie_rule_available'] = (bool) $this->globals->get('pie_rule_available', false);
         $result['player_colors'] = $this->globals->get('player_colors', []);
         $result['active_colors'] = $this->getActiveColorsInGame();
@@ -190,15 +196,15 @@ class Game extends \Bga\GameFramework\Table
     public function placeStone(int $q, int $r, string $color, int $playerId): void
     {
         if (!$this->isValidCoord($q, $r)) {
-            throw new UserException(client_translate("Invalid board coordinate."));
+            throw new UserException(clienttranslate("Invalid board coordinate."));
         }
 
         $row = static::getObjectFromDb("SELECT `color` FROM `board` WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
         if (!$row) {
-            throw new UserException(client_translate("Invalid board space."));
+            throw new UserException(clienttranslate("Invalid board space."));
         }
         if ($row['color'] !== null) {
-            throw new UserException(client_translate("This space is already occupied."));
+            throw new UserException(clienttranslate("This space is already occupied."));
         }
 
         static::DbQuery("UPDATE `board` SET `color` = '{$color}', `player_id` = {$playerId} WHERE `coord_q` = {$q} AND `coord_r` = {$r}");

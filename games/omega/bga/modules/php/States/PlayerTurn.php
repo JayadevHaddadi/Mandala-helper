@@ -38,6 +38,7 @@ class PlayerTurn extends GameState
             'placed_this_turn' => $placedThisTurn,
             'remaining_colors' => $remainingColors,
             'all_colors' => $allColors,
+            'last_placed_coords' => $this->globals->get('last_placed_coords', []),
             'pie_rule_available' => $pieRuleAvailable,
             'scores' => $this->game->calculateAllScores(),
         ];
@@ -50,11 +51,11 @@ class PlayerTurn extends GameState
         $allColors = $this->game->getActiveColorsInGame();
 
         if (!in_array($color, $allColors, true)) {
-            throw new UserException(client_translate("Invalid stone color for this game."));
+            throw new UserException(clienttranslate("Invalid stone color for this game."));
         }
 
         if (in_array($color, $placedThisTurn, true)) {
-            throw new UserException(client_translate("You have already placed a stone of this color this turn."));
+            throw new UserException(clienttranslate("You have already placed a stone of this color this turn."));
         }
 
         $this->game->placeStone($q, $r, $color, $activePlayerId);
@@ -67,9 +68,19 @@ class PlayerTurn extends GameState
         $this->globals->set('placed_coords_this_turn', $placedCoords);
 
         $remainingColors = array_values(array_diff($allColors, $placedThisTurn));
+        $turnFinished = empty($remainingColors);
+
+        if ($turnFinished) {
+            $this->globals->set('last_placed_coords', $placedCoords);
+        }
+
+        $scores = $this->game->calculateAllScores();
+        foreach ($scores as $pId => $data) {
+            $this->bga->playerScore->set((int)$pId, (int)$data['score']);
+        }
 
         // Notify table
-        $this->game->notifyAllPlayers('stonePlaced', client_translate('${player_name} placed a ${color} stone at (${q}, ${r})'), [
+        $this->game->notifyAllPlayers('stonePlaced', clienttranslate('${player_name} placed a ${color} stone at (${q}, ${r})'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->loadPlayersBasicInfos()[$activePlayerId]['player_name'],
             'q' => $q,
@@ -77,11 +88,12 @@ class PlayerTurn extends GameState
             'color' => $color,
             'placed_this_turn' => $placedThisTurn,
             'remaining_colors' => $remainingColors,
-            'scores' => $this->game->calculateAllScores(),
+            'last_placed_coords' => $turnFinished ? $placedCoords : [],
+            'scores' => $scores,
         ]);
 
         // Check if turn complete
-        if (empty($remainingColors)) {
+        if ($turnFinished) {
             // Turn finished
             $this->globals->set('placed_this_turn', []);
             $this->globals->set('placed_coords_this_turn', []);
@@ -97,7 +109,7 @@ class PlayerTurn extends GameState
     {
         $placedCoords = $this->globals->get('placed_coords_this_turn', []);
         if (empty($placedCoords)) {
-            throw new UserException(client_translate("No stones placed this turn to reset."));
+            throw new UserException(clienttranslate("No stones placed this turn to reset."));
         }
 
         foreach ($placedCoords as $pt) {
@@ -111,13 +123,19 @@ class PlayerTurn extends GameState
 
         $allColors = $this->game->getActiveColorsInGame();
 
-        $this->game->notifyAllPlayers('turnReset', client_translate('${player_name} reset their turn placements'), [
+        $scores = $this->game->calculateAllScores();
+        foreach ($scores as $pId => $data) {
+            $this->bga->playerScore->set((int)$pId, (int)$data['score']);
+        }
+
+        $this->game->notifyAllPlayers('turnReset', clienttranslate('${player_name} reset their turn placements'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->loadPlayersBasicInfos()[$activePlayerId]['player_name'],
             'cleared' => $placedCoords,
             'remaining_colors' => $allColors,
             'placed_this_turn' => [],
-            'scores' => $this->game->calculateAllScores(),
+            'last_placed_coords' => $this->globals->get('last_placed_coords', []),
+            'scores' => $scores,
         ]);
 
         return null;
@@ -131,23 +149,28 @@ class PlayerTurn extends GameState
         $placedThisTurn = $this->globals->get('placed_this_turn', []);
 
         if (!$pieAvailable || $turnCount !== 2 || !empty($placedThisTurn)) {
-            throw new UserException(client_translate("The Pie Rule (Swap) is not available at this moment."));
+            throw new UserException(clienttranslate("The Pie Rule (Swap) is not available at this moment."));
         }
 
         $players = array_keys($this->game->loadPlayersBasicInfos());
         if (count($players) !== 2) {
-            throw new UserException(client_translate("Pie Rule is only available in 2-player games."));
+            throw new UserException(clienttranslate("Pie Rule is only available in 2-player games."));
         }
 
         $p1 = (int) $players[0];
         $p2 = (int) $players[1];
         $this->game->swapPlayerColors($p1, $p2);
 
-        $this->game->notifyAllPlayers('colorsSwapped', client_translate('${player_name} chose to swap colors using the Pie Rule!'), [
+        $scores = $this->game->calculateAllScores();
+        foreach ($scores as $pId => $data) {
+            $this->bga->playerScore->set((int)$pId, (int)$data['score']);
+        }
+
+        $this->game->notifyAllPlayers('colorsSwapped', clienttranslate('${player_name} chose to swap colors using the Pie Rule!'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->loadPlayersBasicInfos()[$activePlayerId]['player_name'],
             'player_colors' => $this->globals->get('player_colors', []),
-            'scores' => $this->game->calculateAllScores(),
+            'scores' => $scores,
         ]);
 
         return NextPlayer::class;

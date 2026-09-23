@@ -111,6 +111,13 @@ class PlayerTurn {
         this.game.currentArgs = args;
         this.game.clearHighlights();
 
+        if (args.last_placed_coords !== undefined) {
+            this.game.updateLastPlacedMarkers(args.last_placed_coords);
+        }
+        if (args.scores) {
+            this.game.updateScoresDisplay(args.scores);
+        }
+
         const active = (isCurrentPlayerActive !== undefined) ? isCurrentPlayerActive : this.game.isCurrentPlayerActive();
         this.updateControls(args, active);
         this.game.updateBoardInteractions(active);
@@ -216,6 +223,8 @@ export class Game {
         this.boardData = gamedatas.board || {};
         this.playerColors = gamedatas.player_colors || {};
         this.activeColors = gamedatas.active_colors || ['white', 'black'];
+        this.lastPlacedCoords = gamedatas.last_placed_coords || [];
+        this.currentScores = gamedatas.scores || {};
         this.currentArgs = {
             placed_this_turn: gamedatas.placed_this_turn || [],
             remaining_colors: this.getRemainingColors(gamedatas.placed_this_turn || []),
@@ -225,6 +234,7 @@ export class Game {
 
         this.initDom();
         this.renderBoard();
+        this.updateLastPlacedMarkers(this.lastPlacedCoords);
         this.updateScoresDisplay(gamedatas.scores || {});
         this.setupNotifications();
         this.setupResponsiveScaling();
@@ -310,6 +320,10 @@ export class Game {
                     <stop offset="70%" stop-color="#1976d2"/>
                     <stop offset="100%" stop-color="#0d47a1"/>
                 </radialGradient>
+                <filter id="omega_glow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="2.5" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
             </defs>
         `;
 
@@ -321,6 +335,8 @@ export class Game {
                     const key = `${q}_${r}`;
                     const cell = this.boardData[key];
                     const color = cell ? cell.color : null;
+                    const shineX = (x - size * 0.18).toFixed(1);
+                    const shineY = (y - size * 0.22).toFixed(1);
 
                     html += `
                         <g class="omega_cell" data-q="${q}" data-r="${r}">
@@ -328,8 +344,19 @@ export class Game {
                             <circle class="omega_stone ${color ? 'omega_stone_' + color : ''}"
                                     cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.68).toFixed(1)}"
                                     style="${color ? '' : 'display:none;'}" />
+                            <ellipse class="omega_stone_shine"
+                                    cx="${shineX}" cy="${shineY}"
+                                    rx="${(size * 0.26).toFixed(1)}" ry="${(size * 0.14).toFixed(1)}"
+                                    transform="rotate(-25 ${shineX} ${shineY})"
+                                    style="${color ? '' : 'display:none;'}" />
                             <circle class="omega_ghost_stone"
                                     cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.68).toFixed(1)}"
+                                    style="display:none;" />
+                            <circle class="omega_last_marker"
+                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.74).toFixed(1)}"
+                                    style="display:none;" />
+                            <circle class="omega_last_dot"
+                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"
                                     style="display:none;" />
                         </g>
                     `;
@@ -385,7 +412,7 @@ export class Game {
             const remaining = this.currentArgs?.remaining_colors || this.activeColors;
             if (remaining.length) {
                 const nextColor = remaining[0];
-                ghost.className = `omega_ghost_stone omega_ghost_${nextColor}`;
+                ghost.setAttribute('class', `omega_ghost_stone omega_ghost_${nextColor}`);
                 ghost.style.display = 'block';
                 sounds.playClick();
             }
@@ -409,9 +436,48 @@ export class Game {
         });
     }
 
+    updateLastPlacedMarkers(coords) {
+        this.lastPlacedCoords = coords || [];
+        document.querySelectorAll('.omega_last_marker, .omega_last_dot').forEach(el => {
+            el.style.display = 'none';
+        });
+        if (!Array.isArray(coords)) return;
+        coords.forEach(pt => {
+            const cell = document.querySelector(`.omega_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
+            if (cell) {
+                const marker = cell.querySelector('.omega_last_marker');
+                const dot = cell.querySelector('.omega_last_dot');
+                if (marker) marker.style.display = 'block';
+                if (dot) dot.style.display = 'block';
+            }
+        });
+    }
+
     updateScoresDisplay(scores) {
+        if (!scores) return;
+        this.currentScores = scores;
+
+        // 1. Synchronize BGA sidebar player panel scores next to star ⭐ icon
+        for (const [playerId, data] of Object.entries(scores)) {
+            const scoreVal = data.score !== undefined ? data.score : 0;
+            if (this.scoreCtrl && this.scoreCtrl[playerId]) {
+                if (typeof this.scoreCtrl[playerId].toValue === 'function') {
+                    this.scoreCtrl[playerId].toValue(scoreVal);
+                } else if (typeof this.scoreCtrl[playerId].setValue === 'function') {
+                    this.scoreCtrl[playerId].setValue(scoreVal);
+                }
+            }
+            const scoreEl = document.getElementById(`player_score_${playerId}`);
+            if (scoreEl) {
+                scoreEl.textContent = `${scoreVal}`;
+            }
+        }
+
+        // 2. Render Omega in-game score bar
         const bar = document.getElementById('omega_score_bar');
         if (!bar) return;
+
+        const activePlayerId = this.getActivePlayerId();
 
         let html = '';
         for (const [playerId, data] of Object.entries(scores)) {
@@ -419,8 +485,10 @@ export class Game {
             const pName = pInfo.name || `Player ${playerId}`;
             const color = data.color || 'white';
             const groupsStr = data.groups?.length ? data.groups.join(' × ') : '0';
+            const isActive = String(playerId) === String(activePlayerId);
+
             html += `
-                <div class="omega_score_item omega_score_${color}">
+                <div class="omega_score_item omega_score_${color} ${isActive ? 'omega_score_active' : ''}">
                     <span class="omega_color_pip omega_pip_${color}"></span>
                     <strong class="omega_player_name">${pName}</strong>:
                     <span class="omega_score_val">${data.score}</span>
@@ -445,79 +513,113 @@ export class Game {
         }
     }
 
+    _getNotifArgs(notif) {
+        if (!notif) return {};
+        return (notif.args !== undefined) ? notif.args : notif;
+    }
+
     setupNotifications() {
-        if (!this.bga?.notifications) return;
+        if (this.bga?.notifications?.setupPromiseNotifications) {
+            this.bga.notifications.setupPromiseNotifications();
+        } else if (typeof this.notifications?.setupPromiseNotifications === 'function') {
+            this.notifications.setupPromiseNotifications();
+        } else if (typeof dojo !== 'undefined' && typeof dojo.subscribe === 'function') {
+            dojo.subscribe('stonePlaced', this, 'notif_stonePlaced');
+            dojo.subscribe('turnReset', this, 'notif_turnReset');
+            dojo.subscribe('colorsSwapped', this, 'notif_colorsSwapped');
+            dojo.subscribe('endGameScores', this, 'notif_endGameScores');
+        }
+    }
 
-        this.bga.notifications.subscribe('stonePlaced', (notif) => {
-            const { q, r, color, placed_this_turn, remaining_colors, scores } = notif.args;
-            const key = `${q}_${r}`;
-            this.boardData[key] = { q, r, color };
+    async notif_stonePlaced(notif) {
+        const args = this._getNotifArgs(notif);
+        const { q, r, color, placed_this_turn, remaining_colors, scores, last_placed_coords } = args;
+        const key = `${q}_${r}`;
+        this.boardData[key] = { q, r, color };
 
-            // Update DOM cell
-            const cell = document.querySelector(`.omega_cell[data-q="${q}"][data-r="${r}"]`);
+        // Update DOM cell
+        const cell = document.querySelector(`.omega_cell[data-q="${q}"][data-r="${r}"]`);
+        if (cell) {
+            const stone = cell.querySelector('.omega_stone');
+            const shine = cell.querySelector('.omega_stone_shine');
+            const ghost = cell.querySelector('.omega_ghost_stone');
+            if (ghost) ghost.style.display = 'none';
+            if (stone) {
+                stone.setAttribute('class', `omega_stone omega_stone_${color}`);
+                stone.style.display = 'block';
+            }
+            if (shine) {
+                shine.style.display = 'block';
+            }
+        }
+
+        if (last_placed_coords !== undefined) {
+            this.updateLastPlacedMarkers(last_placed_coords);
+        }
+
+        if (this.currentArgs) {
+            this.currentArgs.placed_this_turn = placed_this_turn || [];
+            this.currentArgs.remaining_colors = remaining_colors || this.getRemainingColors(placed_this_turn);
+            if (this.isCurrentPlayerActive()) {
+                this.playerTurn.updateControls(this.currentArgs, true);
+                this.updateBoardInteractions(true);
+            }
+        }
+
+        sounds.playPlace();
+        this.updateScoresDisplay(scores);
+    }
+
+    async notif_turnReset(notif) {
+        const args = this._getNotifArgs(notif);
+        const { cleared, remaining_colors, placed_this_turn, scores, last_placed_coords } = args;
+        (cleared || []).forEach(pt => {
+            const key = `${pt.q}_${pt.r}`;
+            if (this.boardData[key]) {
+                this.boardData[key].color = null;
+            }
+            const cell = document.querySelector(`.omega_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
             if (cell) {
                 const stone = cell.querySelector('.omega_stone');
-                const ghost = cell.querySelector('.omega_ghost_stone');
-                if (ghost) ghost.style.display = 'none';
+                const shine = cell.querySelector('.omega_stone_shine');
                 if (stone) {
-                    stone.className = `omega_stone omega_stone_${color}`;
-                    stone.style.display = 'block';
+                    stone.style.display = 'none';
+                    stone.setAttribute('class', 'omega_stone');
+                }
+                if (shine) {
+                    shine.style.display = 'none';
                 }
             }
+        });
 
-            if (this.currentArgs) {
-                this.currentArgs.placed_this_turn = placed_this_turn || [];
-                this.currentArgs.remaining_colors = remaining_colors || this.getRemainingColors(placed_this_turn);
-                if (this.isCurrentPlayerActive()) {
-                    this.playerTurn.updateControls(this.currentArgs, true);
-                    this.updateBoardInteractions(true);
-                }
+        if (last_placed_coords !== undefined) {
+            this.updateLastPlacedMarkers(last_placed_coords);
+        }
+
+        if (this.currentArgs) {
+            this.currentArgs.placed_this_turn = placed_this_turn || [];
+            this.currentArgs.remaining_colors = remaining_colors || this.activeColors;
+            if (this.isCurrentPlayerActive()) {
+                this.playerTurn.updateControls(this.currentArgs, true);
+                this.updateBoardInteractions(true);
             }
+        }
 
-            sounds.playPlace();
-            this.updateScoresDisplay(scores);
-        });
+        sounds.playReset();
+        this.updateScoresDisplay(scores);
+    }
 
-        this.bga.notifications.subscribe('turnReset', (notif) => {
-            const { cleared, remaining_colors, placed_this_turn, scores } = notif.args;
-            (cleared || []).forEach(pt => {
-                const key = `${pt.q}_${pt.r}`;
-                if (this.boardData[key]) {
-                    this.boardData[key].color = null;
-                }
-                const cell = document.querySelector(`.omega_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
-                if (cell) {
-                    const stone = cell.querySelector('.omega_stone');
-                    if (stone) {
-                        stone.style.display = 'none';
-                        stone.className = 'omega_stone';
-                    }
-                }
-            });
+    async notif_colorsSwapped(notif) {
+        const args = this._getNotifArgs(notif);
+        this.playerColors = args.player_colors;
+        sounds.playChime();
+        this.updateScoresDisplay(args.scores);
+    }
 
-            if (this.currentArgs) {
-                this.currentArgs.placed_this_turn = placed_this_turn || [];
-                this.currentArgs.remaining_colors = remaining_colors || this.activeColors;
-                if (this.isCurrentPlayerActive()) {
-                    this.playerTurn.updateControls(this.currentArgs, true);
-                    this.updateBoardInteractions(true);
-                }
-            }
-
-            sounds.playReset();
-            this.updateScoresDisplay(scores);
-        });
-
-        this.bga.notifications.subscribe('colorsSwapped', (notif) => {
-            this.playerColors = notif.args.player_colors;
-            sounds.playChime();
-            this.updateScoresDisplay(notif.args.scores);
-        });
-
-        this.bga.notifications.subscribe('endGameScores', (notif) => {
-            sounds.playChime();
-            this.updateScoresDisplay(notif.args.scores);
-        });
+    async notif_endGameScores(notif) {
+        const args = this._getNotifArgs(notif);
+        sounds.playChime();
+        this.updateScoresDisplay(args.scores);
     }
 
     setupResponsiveScaling() {
