@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bga\Games\omegatest\States;
+
+use Bga\GameFramework\StateType;
+use Bga\GameFramework\States\GameState;
+use Bga\Games\omegatest\Game;
+
+class EndScore extends GameState
+{
+    public function __construct(
+        protected Game $game,
+    ) {
+        parent::__construct(
+            $game,
+            id: 99,
+            type: StateType::GAME_END,
+        );
+    }
+
+    public function onEnteringState(): void
+    {
+        $scores = $this->game->calculateAllScores();
+        $bestScore = -1;
+
+        foreach ($scores as $playerId => $data) {
+            $pId = (int) $playerId;
+            $scoreVal = (int) $data['score'];
+            $groups = $data['groups'];
+            $largestGroup = !empty($groups) ? (int) $groups[0] : 0;
+            $secondGroup = (count($groups) > 1) ? (int) $groups[1] : 0;
+
+            // Auxiliary score for tiebreaking: largest group * 1000 + second largest
+            $auxScore = ($largestGroup * 1000) + $secondGroup;
+
+            $this->bga->playerScore->set($pId, $scoreVal);
+            $this->bga->playerScoreAux->set($pId, $auxScore);
+
+            $this->playerStats->set('final_groups_count', count($groups), $pId);
+            $this->playerStats->set('largest_group_size', $largestGroup, $pId);
+
+            if ($scoreVal > $bestScore) {
+                $bestScore = $scoreVal;
+            }
+        }
+
+        $turnCount = (int) $this->globals->get('turn_count', 1);
+        $this->tableStats->set('winning_score', max(0, $bestScore));
+        $this->tableStats->set('turns_number', $turnCount);
+
+        $this->game->notifyAllPlayers('endGameScores', client_translate('Game finished! Final scores computed.'), [
+            'scores' => $scores,
+        ]);
+    }
+}

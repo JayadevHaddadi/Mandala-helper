@@ -15,9 +15,10 @@ on:
         type: choice
         options:
           - all
-          - pushfight
+          - omegatest
+          - yavalath
           - lordsofscotlandtest
-          - lordsofscotland
+          - pushfight
           - mandala
 
 jobs:
@@ -54,8 +55,11 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             CHOICE="${{ github.event.inputs.target }}"
             if [ "$CHOICE" = "all" ]; then
-              python tools/sync.py pushfight
+              python tools/sync.py omegatest
+              python tools/sync.py yavalath
               python tools/sync.py lordsofscotlandtest
+              python tools/sync.py pushfight
+              python tools/sync.py mandala
             else
               python tools/sync.py "$CHOICE"
             fi
@@ -66,15 +70,27 @@ jobs:
             echo "$CHANGED"
 
             DEPLOYED=0
-            if echo "$CHANGED" | grep -q "games/pushfight"; then
-              echo "Deploying Push Fight..."
-              python tools/sync.py pushfight
+            if echo "$CHANGED" | grep -q "games/omega"; then
+              echo "Deploying Omega..."
+              python tools/sync.py omegatest
+              DEPLOYED=1
+            fi
+
+            if echo "$CHANGED" | grep -q "games/yavalath"; then
+              echo "Deploying Yavalath..."
+              python tools/sync.py yavalath
               DEPLOYED=1
             fi
 
             if echo "$CHANGED" | grep -q "games/lordsofscotland"; then
               echo "Deploying Lords of Scotland..."
               python tools/sync.py lordsofscotlandtest
+              DEPLOYED=1
+            fi
+
+            if echo "$CHANGED" | grep -q "games/pushfight"; then
+              echo "Deploying Push Fight..."
+              python tools/sync.py pushfight
               DEPLOYED=1
             fi
 
@@ -85,8 +101,9 @@ jobs:
             fi
 
             if [ "$DEPLOYED" -eq 0 ]; then
-              echo "No specific game folder modified. Deploying pushfight and lordsofscotlandtest..."
-              python tools/sync.py pushfight
+              echo "No specific game folder modified. Deploying active test games..."
+              python tools/sync.py omegatest
+              python tools/sync.py yavalath
               python tools/sync.py lordsofscotlandtest
             fi
           fi

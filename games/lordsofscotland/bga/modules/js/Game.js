@@ -189,6 +189,16 @@ export class Game {
         return false;
     }
 
+    getActivePlayerId() {
+        if (this.bga?.players && typeof this.bga.players.getActivePlayerId === 'function') {
+            return this.bga.players.getActivePlayerId();
+        }
+        if (typeof gameui !== 'undefined' && typeof gameui.getActivePlayerId === 'function') {
+            return gameui.getActivePlayerId();
+        }
+        return null;
+    }
+
     // Safe player ID comparison: PHP sends ints, BGA stores strings — never use ===
     isCurrentPlayer(playerId) {
         if (!playerId || !this.bga?.player_id) return false;

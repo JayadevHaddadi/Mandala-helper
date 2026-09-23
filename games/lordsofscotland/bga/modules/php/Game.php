@@ -110,6 +110,11 @@ class Game extends \Bga\GameFramework\Table
         }
     }
 
+    public function upgradeTableDb($from_version): void
+    {
+        $this->ensureSchema();
+    }
+
     public function getGameProgression(): int
     {
         $maxScore = (int) self::getUniqueValueFromDb("SELECT MAX(`player_score`) FROM `player`") ?: 0;

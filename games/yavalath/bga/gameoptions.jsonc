@@ -1,0 +1,12 @@
+{
+    "100": {
+        "name": "Game Mode",
+        "values": {
+            "1": {
+                "name": "Standard",
+                "description": "Standard Yavalath rules (4 in a row wins, 3 in a row loses)"
+            }
+        },
+        "default": 1
+    }
+}

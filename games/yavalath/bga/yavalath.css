@@ -1,0 +1,157 @@
+/**
+ * Yavalath BGA Stylesheet
+ */
+
+#yavalath_container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#yavalath_header_info {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.yavalath_rule_badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.yavalath_lose_badge {
+    background: #ffebee;
+    color: #c62828;
+    border-color: #ef9a9a;
+}
+
+#yavalath_board_scaler {
+    position: relative;
+    width: 620px;
+    height: 620px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+#yavalath_board_wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 620px;
+    height: 620px;
+    transform-origin: 0 0;
+}
+
+#yavalath_board_svg {
+    background: #dfd7c9;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), inset 0 0 0 1px rgba(0,0,0,0.08);
+}
+
+/* Hexagons */
+.yavalath_hex {
+    fill: #fbf7ee;
+    stroke: #b3a996;
+    stroke-width: 1.5;
+    transition: fill 0.15s ease, stroke 0.15s ease;
+    cursor: default;
+}
+
+.yavalath_valid_target {
+    cursor: pointer;
+}
+
+.yavalath_valid_target:hover .yavalath_hex {
+    fill: #fff4d9;
+    stroke: #d97706;
+    stroke-width: 2.5;
+}
+
+/* Stones */
+.yavalath_stone {
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+    pointer-events: none;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.yavalath_stone_white {
+    fill: #fcfcfc;
+    stroke: #a0a0a0;
+    stroke-width: 1;
+}
+
+.yavalath_stone_black {
+    fill: #222222;
+    stroke: #111111;
+    stroke-width: 1;
+}
+
+.yavalath_stone_red {
+    fill: #d32f2f;
+    stroke: #8b0000;
+    stroke-width: 1;
+}
+
+/* Ghost stone on hover */
+.yavalath_ghost_stone {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.yavalath_ghost_white {
+    fill: #ffffff;
+    stroke: #aaa;
+    stroke-width: 1;
+}
+
+.yavalath_ghost_black {
+    fill: #222222;
+    stroke: #111;
+    stroke-width: 1;
+}
+
+.yavalath_ghost_red {
+    fill: #d32f2f;
+    stroke: #900;
+    stroke-width: 1;
+}
+
+/* Winning & Losing Highlights */
+.yavalath_line_win .yavalath_hex {
+    fill: #c8e6c9 !important;
+    stroke: #2e7d32 !important;
+    stroke-width: 3.5 !important;
+}
+
+.yavalath_line_win .yavalath_stone {
+    filter: drop-shadow(0 0 10px #4caf50);
+}
+
+.yavalath_line_lose .yavalath_hex {
+    fill: #ffcdd2 !important;
+    stroke: #c62828 !important;
+    stroke-width: 3.5 !important;
+}
+
+.yavalath_line_lose .yavalath_stone {
+    filter: drop-shadow(0 0 10px #e53935);
+}
+
+#yavalath_attribution {
+    margin-top: 14px;
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+}

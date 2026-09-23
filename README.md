@@ -32,8 +32,11 @@ Mandala-helper/
     │   ├── bga-prod/                   # Production BGA codebase (mandala)
     │   └── chrome-extension/           # Mandala Point Counter & HUD Chrome Extension
     │
-    └── lordsofscotland/                # [Lords of Scotland] (Upcoming Game)
-        └── bga/                        # Studio sandbox codebase
+    ├── lordsofscotland/                # [Lords of Scotland] (Upcoming Game)
+    │   └── bga/                        # Studio sandbox codebase
+    │
+    └── omega/                          # [Omega] (nestorgames - Modern Hex Engine)
+        └── bga/                        # Studio sandbox codebase (omegatest)
 ```
 
 ---
@@ -47,6 +50,9 @@ A single, fast delta-sync script replaces all individual sync scripts. It compar
 ```bash
 # Push Fight (syncs games/pushfight/bga -> remote pushfighttest)
 python tools/sync.py pushfighttest
+
+# Omega (syncs games/omega/bga -> remote omegatest)
+python tools/sync.py omegatest
 
 # Mandala Production (syncs games/mandala/bga-prod -> remote mandala)
 python tools/sync.py mandala

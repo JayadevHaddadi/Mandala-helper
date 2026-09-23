@@ -28,6 +28,10 @@ TARGET_MAP = {
     "mandala": ("games/mandala/bga-prod", "mandala"),
     "lordsofscotland": ("games/lordsofscotland/bga", "lordsofscotlandtest"),
     "lordsofscotlandtest": ("games/lordsofscotland/bga", "lordsofscotlandtest"),
+    "omega": ("games/omega/bga", "omegatest"),
+    "omegatest": ("games/omega/bga", "omegatest"),
+    "yavalath": ("games/yavalath/bga", "yavalath"),
+    "yavalathtest": ("games/yavalath/bga", "yavalath"),
 }
 
 def load_credentials():

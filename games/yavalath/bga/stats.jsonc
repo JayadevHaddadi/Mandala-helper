@@ -1,0 +1,31 @@
+{
+    "table": {
+        "turns_number": {
+            "id": 10,
+            "name": "Number of turns",
+            "type": "int"
+        },
+        "win_by_four": {
+            "id": 11,
+            "name": "Won by completing 4-in-a-row",
+            "type": "int"
+        },
+        "win_by_opponent_three": {
+            "id": 12,
+            "name": "Won by opponent making 3-in-a-row",
+            "type": "int"
+        }
+    },
+    "player": {
+        "turns_number": {
+            "id": 10,
+            "name": "Number of turns",
+            "type": "int"
+        },
+        "stones_placed": {
+            "id": 11,
+            "name": "Stones placed",
+            "type": "int"
+        }
+    }
+}
