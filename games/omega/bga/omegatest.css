@@ -170,46 +170,22 @@
     pointer-events: none;
 }
 
-/* Last placed reminder beacon/markers */
+/* Last placed reminder marker - centered pip on the stone */
 .omega_last_marker {
-    fill: none;
-    stroke: #ffb300;
-    stroke-width: 2.5;
-    stroke-dasharray: 4 2;
-    pointer-events: none;
-    animation: omega-pulse 2s infinite ease-in-out;
-    filter: drop-shadow(0 0 4px rgba(255, 179, 0, 0.85));
-}
-
-.omega_last_dot {
     fill: #ffb300;
     stroke: #ffffff;
-    stroke-width: 1;
+    stroke-width: 1.5;
     pointer-events: none;
-    animation: omega-pulse-dot 2s infinite ease-in-out;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+    animation: omega-pulse 2s infinite ease-in-out;
 }
 
 @keyframes omega-pulse {
     0%, 100% {
         opacity: 0.95;
-        stroke-width: 2.5;
-        transform: scale(1);
     }
     50% {
-        opacity: 0.45;
-        stroke-width: 3.5;
-        transform: scale(1.04);
-    }
-}
-
-@keyframes omega-pulse-dot {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.6;
-        transform: scale(0.85);
+        opacity: 0.35;
     }
 }
 

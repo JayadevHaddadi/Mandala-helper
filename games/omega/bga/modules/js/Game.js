@@ -25,17 +25,19 @@ class SoundController {
         try {
             this.init();
             if (!this.ctx) return;
+            const now = this.ctx.currentTime;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(440, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.08);
-            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+            osc.frequency.setValueAtTime(700, now);
+            osc.frequency.exponentialRampToValueAtTime(350, now + 0.025);
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.03, now + 0.002);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
             osc.connect(gain);
             gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.03);
         } catch (e) {}
     }
 
@@ -44,17 +46,48 @@ class SoundController {
         try {
             this.init();
             if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(280, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.12);
-            gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.12);
+            const now = this.ctx.currentTime;
+
+            // 1. Crisp light stone contact transient (mineral tap)
+            const oscClick = this.ctx.createOscillator();
+            const gainClick = this.ctx.createGain();
+            oscClick.type = 'sine';
+            oscClick.frequency.setValueAtTime(1450, now);
+            oscClick.frequency.exponentialRampToValueAtTime(550, now + 0.018);
+            gainClick.gain.setValueAtTime(0.001, now);
+            gainClick.gain.linearRampToValueAtTime(0.12, now + 0.002);
+            gainClick.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+            oscClick.connect(gainClick);
+            gainClick.connect(this.ctx.destination);
+            oscClick.start(now);
+            oscClick.stop(now + 0.03);
+
+            // 2. Meditative mineral body resonance (soothing stone marimba/lithophone tone)
+            const oscBody = this.ctx.createOscillator();
+            const gainBody = this.ctx.createGain();
+            oscBody.type = 'sine';
+            oscBody.frequency.setValueAtTime(720, now);
+            oscBody.frequency.exponentialRampToValueAtTime(690, now + 0.24);
+            gainBody.gain.setValueAtTime(0.001, now);
+            gainBody.gain.linearRampToValueAtTime(0.14, now + 0.004);
+            gainBody.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+            oscBody.connect(gainBody);
+            gainBody.connect(this.ctx.destination);
+            oscBody.start(now);
+            oscBody.stop(now + 0.25);
+
+            // 3. Delicate crystalline harmonic overtone (subtle glassy ceramic sheen)
+            const oscHarmonic = this.ctx.createOscillator();
+            const gainHarmonic = this.ctx.createGain();
+            oscHarmonic.type = 'sine';
+            oscHarmonic.frequency.setValueAtTime(1440, now);
+            gainHarmonic.gain.setValueAtTime(0.001, now);
+            gainHarmonic.gain.linearRampToValueAtTime(0.04, now + 0.003);
+            gainHarmonic.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+            oscHarmonic.connect(gainHarmonic);
+            gainHarmonic.connect(this.ctx.destination);
+            oscHarmonic.start(now);
+            oscHarmonic.stop(now + 0.13);
         } catch (e) {}
     }
 
@@ -353,10 +386,7 @@ export class Game {
                                     cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.68).toFixed(1)}"
                                     style="display:none;" />
                             <circle class="omega_last_marker"
-                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(size * 0.74).toFixed(1)}"
-                                    style="display:none;" />
-                            <circle class="omega_last_dot"
-                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"
+                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6"
                                     style="display:none;" />
                         </g>
                     `;
@@ -438,7 +468,7 @@ export class Game {
 
     updateLastPlacedMarkers(coords) {
         this.lastPlacedCoords = coords || [];
-        document.querySelectorAll('.omega_last_marker, .omega_last_dot').forEach(el => {
+        document.querySelectorAll('.omega_last_marker').forEach(el => {
             el.style.display = 'none';
         });
         if (!Array.isArray(coords)) return;
@@ -446,9 +476,7 @@ export class Game {
             const cell = document.querySelector(`.omega_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
             if (cell) {
                 const marker = cell.querySelector('.omega_last_marker');
-                const dot = cell.querySelector('.omega_last_dot');
                 if (marker) marker.style.display = 'block';
-                if (dot) dot.style.display = 'block';
             }
         });
     }
