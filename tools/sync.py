@@ -128,6 +128,10 @@ def sync_directory(sftp, local_dir, remote_dir, dry_run=False):
                 action = "[DRY-RUN UPLOAD]" if dry_run else "[SYNC]"
                 print(f"{action} {item} -> {r_path} ({l_stat.st_size} bytes)", flush=True)
                 if not dry_run:
+                    try:
+                        sftp.remove(r_path)
+                    except IOError:
+                        pass
                     sftp.put(l_path, r_path)
                 uploaded += 1
             else:
