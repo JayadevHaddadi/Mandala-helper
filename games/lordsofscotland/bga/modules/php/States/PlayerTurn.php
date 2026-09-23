@@ -113,9 +113,9 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actMuster(int $card_id, bool|int $face_up, int $activePlayerId): string
+    public function actMuster(int $card_id, int $face_up, int $activePlayerId): string
     {
-        $face_up = (bool) $face_up;
+        $face_up = ($face_up === 1);
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $card_id AND `location` = 'hand' AND `location_arg` = $activePlayerId");
         if (!$card) {
             throw new UserException(clienttranslate('This card is not in your hand'));
@@ -284,7 +284,7 @@ class PlayerTurn extends GameState
         $this->game->globals->set('extra_muster_active', 0);
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'hand' AND `location_arg` = $playerId LIMIT 1");
         if ($card) {
-            return $this->actMuster((int)$card['card_id'], false, $playerId);
+            return $this->actMuster((int)$card['card_id'], 0, $playerId);
         }
         $recruit = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'recruit' LIMIT 1");
         if ($recruit) {

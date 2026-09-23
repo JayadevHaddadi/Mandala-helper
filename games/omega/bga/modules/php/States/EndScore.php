@@ -8,6 +8,8 @@ use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\Games\omegatest\Game;
 
+const ST_END_GAME = 99;
+
 class EndScore extends GameState
 {
     public function __construct(
@@ -15,12 +17,12 @@ class EndScore extends GameState
     ) {
         parent::__construct(
             $game,
-            id: 99,
-            type: StateType::GAME_END,
+            id: 98,
+            type: StateType::GAME,
         );
     }
 
-    public function onEnteringState(): void
+    public function onEnteringState(): int
     {
         $scores = $this->game->calculateAllScores();
         $bestScore = -1;
@@ -54,5 +56,7 @@ class EndScore extends GameState
         $this->game->notifyAllPlayers('endGameScores', client_translate('Game finished! Final scores computed.'), [
             'scores' => $scores,
         ]);
+
+        return ST_END_GAME;
     }
 }

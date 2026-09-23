@@ -90,13 +90,19 @@ class PlayerTurn {
     }
 }
 
-export default class Game {
+export class Game {
     constructor(bga) {
         this.bga = bga;
         this.HEX_RADIUS = 4;
         this.HEX_SIZE = 30;
         this.boardData = {};
         this.playerColors = {};
+        this.eliminatedPlayers = [];
+
+        // Register State Handlers
+        if (this.bga?.states && typeof this.bga.states.register === 'function') {
+            this.bga.states.register('PlayerTurn', new PlayerTurn(this, bga));
+        }
     }
 
     isCurrentPlayerActive() {
@@ -287,52 +293,68 @@ export default class Game {
     }
 
     setupNotifications() {
-        if (!this.bga?.notifications) return;
+        if (this.bga?.notifications?.setupPromiseNotifications) {
+            this.bga.notifications.setupPromiseNotifications();
+        } else if (typeof dojo !== 'undefined' && typeof dojo.subscribe === 'function') {
+            dojo.subscribe('stonePlaced', this, 'notif_stonePlaced');
+            dojo.subscribe('playerEliminated', this, 'notif_playerEliminated');
+            dojo.subscribe('endGameScores', this, 'notif_endGameScores');
+        } else if (typeof this.bga?.notifications?.subscribe === 'function') {
+            this.bga.notifications.subscribe('stonePlaced', (notif) => this.notif_stonePlaced(notif));
+            this.bga.notifications.subscribe('playerEliminated', (notif) => this.notif_playerEliminated(notif));
+            this.bga.notifications.subscribe('endGameScores', (notif) => this.notif_endGameScores(notif));
+        }
+    }
 
-        this.bga.notifications.subscribe('stonePlaced', (notif) => {
-            const { q, r, color, result, line } = notif.args;
-            const key = `${q}_${r}`;
-            this.boardData[key] = { q, r, color };
+    _getNotifArgs(notif) {
+        if (!notif) return {};
+        return (notif.args !== undefined) ? notif.args : notif;
+    }
 
-            const cell = document.querySelector(`.yavalath_cell[data-q="${q}"][data-r="${r}"]`);
-            if (cell) {
-                const stone = cell.querySelector('.yavalath_stone');
-                const ghost = cell.querySelector('.yavalath_ghost_stone');
-                if (ghost) ghost.style.display = 'none';
-                if (stone) {
-                    stone.className = `yavalath_stone yavalath_stone_${color}`;
-                    stone.style.display = 'block';
-                }
+    notif_stonePlaced(notif) {
+        const { q, r, color, result, line } = this._getNotifArgs(notif);
+        const key = `${q}_${r}`;
+        this.boardData[key] = { q, r, color };
+
+        const cell = document.querySelector(`.yavalath_cell[data-q="${q}"][data-r="${r}"]`);
+        if (cell) {
+            const stone = cell.querySelector('.yavalath_stone');
+            const ghost = cell.querySelector('.yavalath_ghost_stone');
+            if (ghost) ghost.style.display = 'none';
+            if (stone) {
+                stone.className = `yavalath_stone yavalath_stone_${color}`;
+                stone.style.display = 'block';
             }
+        }
 
-            // Highlight lines if win/lose
-            if (result === 'win' && line && line.length) {
-                sounds.playWin();
-                line.forEach(pt => {
-                    const c = document.querySelector(`.yavalath_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
-                    if (c) c.classList.add('yavalath_line_win');
-                });
-            } else if (result === 'lose' && line && line.length) {
-                line.forEach(pt => {
-                    const c = document.querySelector(`.yavalath_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
-                    if (c) c.classList.add('yavalath_line_lose');
-                });
-            } else {
-                sounds.playPlace();
-            }
-        });
-
-        this.bga.notifications.subscribe('playerEliminated', (notif) => {
-            sounds.playPlace();
-            const eliminatedId = notif.args.player_id;
-            if (!this.eliminatedPlayers.includes(eliminatedId)) {
-                this.eliminatedPlayers.push(eliminatedId);
-            }
-        });
-
-        this.bga.notifications.subscribe('endGameScores', () => {
+        // Highlight lines if win/lose
+        if (result === 'win' && line && line.length) {
             sounds.playWin();
-        });
+            line.forEach(pt => {
+                const c = document.querySelector(`.yavalath_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
+                if (c) c.classList.add('yavalath_line_win');
+            });
+        } else if (result === 'lose' && line && line.length) {
+            line.forEach(pt => {
+                const c = document.querySelector(`.yavalath_cell[data-q="${pt.q}"][data-r="${pt.r}"]`);
+                if (c) c.classList.add('yavalath_line_lose');
+            });
+        } else {
+            sounds.playPlace();
+        }
+    }
+
+    notif_playerEliminated(notif) {
+        sounds.playPlace();
+        const args = this._getNotifArgs(notif);
+        const eliminatedId = args.player_id;
+        if (!this.eliminatedPlayers.includes(eliminatedId)) {
+            this.eliminatedPlayers.push(eliminatedId);
+        }
+    }
+
+    notif_endGameScores(notif) {
+        sounds.playWin();
     }
 
     setupResponsiveScaling() {
@@ -363,3 +385,6 @@ export default class Game {
         wrapper.style.transform = `scale(${scale})`;
     }
 }
+
+export default Game;
+

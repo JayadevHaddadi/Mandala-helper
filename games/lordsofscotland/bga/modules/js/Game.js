@@ -563,13 +563,13 @@ export class Game {
             canPower 
                 ? _('Muster Face-Up (Activate ${power})').replace('${power}', clanInfo.power)
                 : _('Muster Face-Up (${clan})').replace('${clan}', clanInfo.name),
-            () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: true }),
+            () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 1 }),
             { color: canPower ? 'primary' : 'secondary' }
         );
 
         this.bga.statusBar.addActionButton(
             _('Muster Face-Down (Hidden)'),
-            () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: false }),
+            () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 0 }),
             { color: 'secondary' }
         );
 
