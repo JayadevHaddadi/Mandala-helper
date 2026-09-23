@@ -451,6 +451,29 @@
     100% { box-shadow: none; }
 }
 
+/* Card Travel & Placement Animations */
+.los-card-flying {
+    z-index: 1000 !important;
+    pointer-events: none !important;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.8) !important;
+    will-change: transform;
+}
+
+.los-card-pop-in {
+    animation: los-pop-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes los-pop-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 
 
 

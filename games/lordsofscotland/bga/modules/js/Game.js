@@ -201,10 +201,29 @@ export class Game {
         return null;
     }
 
+    getCurrentPlayerId() {
+        if (this.bga?.players && typeof this.bga.players.getCurrentPlayerId === 'function') {
+            const id = this.bga.players.getCurrentPlayerId();
+            if (id) return parseInt(id, 10);
+        }
+        if (typeof gameui !== 'undefined' && gameui.player_id) {
+            return parseInt(gameui.player_id, 10);
+        }
+        if (this.bga?.player_id) {
+            return parseInt(this.bga.player_id, 10);
+        }
+        if (this.gamedatas?.current_player_id) {
+            return parseInt(this.gamedatas.current_player_id, 10);
+        }
+        return null;
+    }
+
     // Safe player ID comparison: PHP sends ints, BGA stores strings — never use ===
     isCurrentPlayer(playerId) {
-        if (!playerId || !this.bga?.player_id) return false;
-        return parseInt(playerId, 10) === parseInt(this.bga.player_id, 10);
+        if (!playerId) return false;
+        const curId = this.getCurrentPlayerId();
+        if (!curId) return false;
+        return parseInt(playerId, 10) === curId;
     }
 
     setup(gamedatas) {
@@ -266,17 +285,18 @@ export class Game {
         this.renderSupporterRow(gamedatas.supporters);
         this.renderHand(gamedatas.hand);
         this.renderArmies(gamedatas.armies);
-        this.updateVictorInitiativeBadge();
 
         this.setupNotifications();
     }
 
     updateVictorInitiativeBadge() {
         const viPlayerId = parseInt(this.gamedatas?.victor_initiative, 10);
-        const viPlayer = this.gamedatas?.players?.[viPlayerId];
+        const viPlayer = this.gamedatas?.players?.[viPlayerId] || this.gamedatas?.players?.[String(viPlayerId)];
         const el = document.getElementById('los-vi-val');
         if (el && viPlayer) {
-            el.innerHTML = `<span style="color: #${viPlayer.color}; font-weight: bold;">👑 ${viPlayer.name}</span>`;
+            const pName = viPlayer.player_name || viPlayer.name || '';
+            const pColor = viPlayer.player_color || viPlayer.color || 'ffffff';
+            el.innerHTML = `<span style="color: #${pColor}; font-weight: bold;">👑 ${pName}</span>`;
         }
 
         // Synchronize crown badge on player army headers
@@ -285,10 +305,8 @@ export class Game {
             const titleEl = box.querySelector('.los-army-player-title');
             if (!titleEl) return;
 
-            const existingBadge = titleEl.querySelector('.los-crown-badge');
-            if (existingBadge) {
-                existingBadge.remove();
-            }
+            const existingBadges = titleEl.querySelectorAll('.los-crown-badge');
+            existingBadges.forEach(b => b.remove());
 
             if (viPlayerId && boxPlayerId === viPlayerId) {
                 const badge = document.createElement('span');
@@ -342,38 +360,37 @@ export class Game {
         if (!container) return;
         container.innerHTML = '';
 
-        const myId = parseInt(this.bga?.player_id, 10);
-        const viPlayerId = parseInt(this.gamedatas?.victor_initiative, 10);
+        const myId = this.getCurrentPlayerId();
 
         // Sort so current player's army is rendered FIRST (directly under Your Hand)
         const playersList = Object.entries(this.gamedatas.players || {}).map(([key, p]) => {
+            const id = parseInt(p.player_id || p.id || key, 10);
             return {
-                id: parseInt(p.id || p.player_id || key, 10),
-                name: p.name || p.player_name || '',
-                color: p.color || p.player_color || 'ffffff',
-                score: p.score ?? p.player_score ?? 0,
+                id,
+                name: p.player_name || p.name || '',
+                color: p.player_color || p.color || 'ffffff',
+                score: p.player_score ?? p.score ?? 0,
                 player_no: parseInt(p.player_no || p.no || 0, 10)
             };
         }).sort((a, b) => {
-            if (a.id === myId) return -1;
-            if (b.id === myId) return 1;
+            if (myId && a.id === myId) return -1;
+            if (myId && b.id === myId) return 1;
             return a.player_no - b.player_no;
         });
 
         playersList.forEach(player => {
             const pId = player.id;
-            const playerArmy = (armies && armies[pId]) ? armies[pId] : [];
+            const playerArmy = (armies && (armies[pId] || armies[String(pId)])) ? (armies[pId] || armies[String(pId)]) : [];
 
             const armyBox = document.createElement('div');
             armyBox.id = `player-army-box-${pId}`;
             armyBox.dataset.playerId = pId;
             armyBox.className = 'los-panel los-army-box';
-            if (pId === myId) {
+            if (myId && pId === myId) {
                 armyBox.classList.add('los-my-army');
             }
 
-            const isVI = Boolean(viPlayerId && pId === viPlayerId);
-            const isMe = (pId === myId);
+            const isMe = Boolean(myId && pId === myId);
 
             armyBox.innerHTML = `
                 <div class="los-army-header">
@@ -381,7 +398,6 @@ export class Game {
                         <span class="los-player-dot" style="background-color: #${player.color};"></span>
                         <strong style="color: #${player.color};">${player.name}</strong>
                         ${isMe ? '<span class="los-you-badge">(You)</span>' : ''}
-                        ${isVI ? '<span class="los-crown-badge" title="Victor’s Initiative">👑 Initiative</span>' : ''}
                     </div>
                     <div class="los-army-score-info">
                         <span>Total Score: <strong id="score-${pId}">${player.score}</strong> pts</span>
@@ -403,6 +419,8 @@ export class Game {
 
             container.appendChild(armyBox);
         });
+
+        this.updateVictorInitiativeBadge();
     }
 
     renderHand(handCards) {
@@ -511,12 +529,12 @@ export class Game {
 
         el.classList.add('los-card-flying');
         el.style.transition = 'none';
-        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        el.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
 
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                el.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
-                el.style.transform = 'translate(0, 0)';
+                el.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                el.style.transform = 'translate(0, 0) scale(1)';
             });
         });
 
@@ -527,7 +545,7 @@ export class Game {
             el.removeEventListener('transitionend', cleanup);
         };
         el.addEventListener('transitionend', cleanup);
-        setTimeout(cleanup, 600); // safety net if transitionend never fires
+        setTimeout(cleanup, 550);
     }
 
     popInCard(el) {

@@ -166,18 +166,24 @@ class PlayerTurn extends GameState
             return NextPlayer::class;
         }
 
-        // Played face-up
+        // Played face-up: ALWAYS broadcast cardMustered first so the card is removed from hand,
+        // placed into the army row, and animated smoothly!
+        $musterMsg = $powerActivated
+            ? clienttranslate('${player_name} musters ${clan_name} (${strength}) face-up and activates its bloodline power!')
+            : clienttranslate('${player_name} musters ${clan_name} (${strength}) face-up (strength is not lowest; power does not activate)');
+
+        $this->notify->all("cardMustered", $musterMsg, [
+            'player_id' => $activePlayerId,
+            'player_name' => $playerName,
+            'card_id' => $card_id,
+            'clan' => $clan,
+            'clan_name' => $clanName,
+            'strength' => $strength,
+            'is_face_up' => 1,
+            'power_activated' => $powerActivated ? 1 : 0,
+        ]);
+
         if (!$powerActivated) {
-            $this->notify->all("cardMustered", clienttranslate('${player_name} musters ${clan_name} (${strength}) face-up (strength is not lowest; power does not activate)'), [
-                'player_id' => $activePlayerId,
-                'player_name' => $playerName,
-                'card_id' => $card_id,
-                'clan' => $clan,
-                'clan_name' => $clanName,
-                'strength' => $strength,
-                'is_face_up' => 1,
-                'power_activated' => 0,
-            ]);
             return NextPlayer::class;
         }
 
@@ -185,7 +191,7 @@ class PlayerTurn extends GameState
         $this->game->playerStats->inc('powers_activated', 1, $activePlayerId);
         $powerDesc = Game::CLANS[$clan]['power'];
 
-        $this->notify->all("powerActivated", clienttranslate('${player_name} musters ${clan_name} (${strength}) and activates its power: <strong>${power_desc}</strong>!'), [
+        $this->notify->all("powerActivated", clienttranslate('Bloodline power activated: <strong>${power_desc}</strong>!'), [
             'player_id' => $activePlayerId,
             'player_name' => $playerName,
             'card_id' => $card_id,

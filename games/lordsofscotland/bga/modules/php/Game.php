@@ -125,15 +125,14 @@ class Game extends \Bga\GameFramework\Table
     {
         $result = [];
 
-        $result['players'] = $this->getCollectionFromDb(
-            "SELECT `player_id` AS `id`, `player_score` AS `score`, `player_score_aux` AS `score_aux`, `player_name` AS `name`, `player_color` AS `color` FROM `player`"
-        );
+        $result['players'] = $this->loadPlayersBasicInfos();
 
         $result['current_skirmish'] = (int) $this->globals->get('current_skirmish', 1);
         $result['current_round'] = (int) $this->globals->get('current_round', 1);
         $vi = (int) $this->globals->get('victor_initiative', 0);
         if ($vi <= 0 && !empty($result['players'])) {
-            $vi = (int) array_key_first($result['players']);
+            $pKeys = array_keys($result['players']);
+            $vi = (int) $pKeys[array_rand($pKeys)];
             $this->globals->set('victor_initiative', $vi);
         }
         $result['victor_initiative'] = $vi;
@@ -183,18 +182,20 @@ class Game extends \Bga\GameFramework\Table
         );
         $armies = [];
         foreach ($result['players'] as $pId => $pData) {
-            $armies[$pId] = [];
+            $armies[(string)$pId] = [];
         }
         foreach ($armyCards as $c) {
-            $pId = (int) $c['player_id'];
-            if (!$c['is_face_up'] && (int)$currentPlayerId !== $pId) {
+            $pId = (string) $c['player_id'];
+            if (!$c['is_face_up'] && (int)$currentPlayerId !== (int)$pId) {
                 // Opponents see it is face down
                 $c['clan'] = 'hidden';
                 $c['strength'] = 0;
             }
-            $armies[$pId][] = $c;
+            if (isset($armies[$pId])) {
+                $armies[$pId][] = $c;
+            }
         }
-        $result['armies'] = $armies;
+        $result['armies'] = (object) $armies;
 
         // Player victory piles (cards claimed)
         $scoreCards = self::getObjectListFromDb(
@@ -274,8 +275,9 @@ class Game extends \Bga\GameFramework\Table
             "INSERT INTO `card` (`clan`, `strength`, `location`, `location_arg`, `is_face_up`, `rank`) VALUES " . implode(',', $cardsToInsert)
         );
 
-        // 2. Setup Globals
-        $firstPlayerId = (int) array_key_first($players);
+        // 2. Setup Globals: randomly determine who has Victor's Initiative for the first skirmish
+        $playerIds = array_keys($players);
+        $firstPlayerId = (int) $playerIds[array_rand($playerIds)];
         $this->globals->set('current_skirmish', 1);
         $this->globals->set('current_round', 1);
         $this->globals->set('victor_initiative', $firstPlayerId);

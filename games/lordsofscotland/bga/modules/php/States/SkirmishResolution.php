@@ -204,11 +204,15 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         );
         $armies = [];
         foreach ($rankings as $r) {
-            $armies[(int)$r['player_id']] = [];
+            $armies[(string)$r['player_id']] = [];
         }
         foreach ($armyCards as $c) {
-            $armies[(int)$c['player_id']][] = $c;
+            $pId = (string) $c['player_id'];
+            if (isset($armies[$pId])) {
+                $armies[$pId][] = $c;
+            }
         }
+        $armies = (object) $armies;
 
         $this->notify->all("newSkirmishStarted", clienttranslate('=== Skirmish #${skirmish_num} begins! Victor\'s Initiative is held by ${winner_name} ==='), [
             'skirmish_num' => $skirmishNum,
