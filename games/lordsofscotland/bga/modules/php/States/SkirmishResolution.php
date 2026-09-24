@@ -177,17 +177,12 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         // 2. Discard remaining recruit and supporter cards
         Game::DbQuery("UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0 WHERE `location` IN ('recruit', 'supporter')");
 
-        // 3. Deal fresh 5 face-down recruits
-        for ($slot = 0; $slot < 5; $slot++) {
-            $this->game->drawCardFromDeck('recruit', $slot, 0);
-        }
+        // 3. Deal fresh 5 recruits (slot 0 face-up, rest face-down)
+        $recruitCards = $this->game->dealRecruitRow();
 
         // 4. Deal fresh supporters (equal to player count)
         $numPlayers = count($rankings);
         $this->game->dealSupporterRow($numPlayers);
-
-        // 5. Flip slot 0 recruit card face-up for round 1
-        Game::DbQuery("UPDATE `card` SET `is_face_up` = 1 WHERE `location` = 'recruit' AND `location_arg` = 0");
 
         $skirmishNum = (int) $this->game->globals->get('current_skirmish', 1) + 1;
         $this->game->globals->set('current_skirmish', $skirmishNum);
@@ -198,22 +193,12 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         // Victor starts next skirmish
         $this->game->gamestate->changeActivePlayer($winnerId);
 
-        $recruitCards = Game::getObjectListFromDb(
-            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `slot`, `is_face_up` FROM `card` WHERE `location` = 'recruit' ORDER BY `location_arg` ASC"
-        );
-        foreach ($recruitCards as &$c) {
-            if (!$c['is_face_up']) {
-                $c['clan'] = 'hidden';
-                $c['strength'] = 0;
-            }
-        }
-
         $supporters = Game::getObjectListFromDb(
             "SELECT `card_id`, `clan`, `strength`, `location_arg` FROM `card` WHERE `location` = 'supporter' ORDER BY `card_id` ASC"
         );
 
         $armyCards = Game::getObjectListFromDb(
-            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up`, `copied_clan`, `persisted`, `round_played` FROM `card` WHERE `location` = 'army' ORDER BY `card_id` ASC"
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up`, `copied_clan`, `persisted`, `power_activated`, `round_played` FROM `card` WHERE `location` = 'army' ORDER BY `card_id` ASC"
         );
         $armies = [];
         foreach ($rankings as $r) {

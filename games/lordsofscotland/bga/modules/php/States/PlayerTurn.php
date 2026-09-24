@@ -81,7 +81,23 @@ class PlayerTurn extends GameState
         Game::DbQuery("UPDATE `card` SET `location` = 'hand', `location_arg` = $activePlayerId, `is_face_up` = 0 WHERE `card_id` = $card_id");
 
         // Refill recruit slot with same orientation
-        $refillCard = $this->game->drawCardFromDeck('recruit', $slot, $wasFaceUp);
+        $refillCard = $this->game->drawCardFromDeck('recruit', $slot, $wasFaceUp ? 1 : 0);
+        if (!$refillCard) {
+            Game::DbQuery("UPDATE `card` SET `location` = 'deck', `location_arg` = 0, `is_face_up` = 0 WHERE `location` = 'discard'");
+            $refillCard = $this->game->drawCardFromDeck('recruit', $slot, $wasFaceUp ? 1 : 0);
+        }
+
+        $publicRefillCard = null;
+        if ($refillCard) {
+            $publicRefillCard = [
+                'card_id' => (int) $refillCard['card_id'],
+                'slot' => $slot,
+                'location_arg' => $slot,
+                'clan' => $wasFaceUp ? $refillCard['clan'] : 'hidden',
+                'strength' => $wasFaceUp ? (int)$refillCard['strength'] : 0,
+                'is_face_up' => $wasFaceUp ? 1 : 0,
+            ];
+        }
 
         $playerName = $this->game->getPlayerNameById($activePlayerId);
 
@@ -98,7 +114,7 @@ class PlayerTurn extends GameState
             'card_id' => $card_id,
             'was_face_up' => $wasFaceUp,
             'card' => $publicCard,
-            'refill_card' => $refillCard && $wasFaceUp ? $refillCard : ($refillCard ? ['card_id' => $refillCard['card_id'], 'clan' => 'hidden', 'strength' => 0, 'slot' => $slot, 'is_face_up' => 0] : null),
+            'refill_card' => $publicRefillCard,
         ]);
 
         if (!$wasFaceUp) {

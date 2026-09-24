@@ -327,7 +327,9 @@ export class Game {
         container.innerHTML = '';
 
         for (let slot = 0; slot < 5; slot++) {
-            const card = recruitCards.find(c => parseInt(c.slot) === slot);
+            const card = Array.isArray(recruitCards)
+                ? recruitCards.find(c => parseInt(c.slot !== undefined ? c.slot : c.location_arg, 10) === slot)
+                : null;
             const slotEl = document.createElement('div');
             slotEl.id = `recruit-slot-${slot}`;
             slotEl.className = 'los-card-slot';
@@ -464,6 +466,10 @@ export class Game {
         el.dataset.context = context;
         if (playerId) el.dataset.playerId = String(playerId);
 
+        // Truly face-up means not generic hidden card and is_face_up !== 0
+        const isFaceUp = (card.clan !== 'hidden') && (card.is_face_up === undefined || Number(card.is_face_up) === 1);
+        el.dataset.isFaceUp = isFaceUp ? '1' : '0';
+
         if (card.clan === 'hidden') {
             el.classList.add('los-card-back');
             el.innerHTML = `
@@ -481,8 +487,26 @@ export class Game {
         // You can see your own face-down army card's real face, but it's still secret to opponents.
         const isSecretToOthers = (context === 'army') && card.is_face_up !== undefined && Number(card.is_face_up) === 0;
 
+        let badgeHtml = '';
+        if (isSecretToOthers) {
+            badgeHtml = '<div class="los-hidden-badge" title="Hidden from opponents until revealed">🙈 Hidden</div>';
+        } else if (context === 'army') {
+            const powerActive = Number(card.power_activated) === 1;
+            const endOfSkirmishClans = ['cochrane', 'macdonnell', 'bruce'];
+            const effectiveClan = card.copied_clan || card.clan;
+            if (powerActive && endOfSkirmishClans.includes(effectiveClan) && !isPersisted) {
+                let label = '⚡ Power Active';
+                if (effectiveClan === 'cochrane') label = '⚡ 2 Supporters';
+                else if (effectiveClan === 'macdonnell') label = '⚡ Persists';
+                else if (effectiveClan === 'bruce') label = '⚡ Wild';
+                badgeHtml = `<div class="los-active-power-badge">${label}</div>`;
+            } else if (isPersisted) {
+                badgeHtml = '<div class="los-persisted-badge-top">🛡️ Persisted</div>';
+            }
+        }
+
         el.innerHTML = `
-            ${isSecretToOthers ? '<div class="los-hidden-badge" title="Hidden from opponents until revealed">🙈 Hidden</div>' : ''}
+            ${badgeHtml}
             <div class="los-card-corner-top">
                 <span class="los-card-strength">${isBruce ? '★' : card.strength}</span>
                 <span class="los-card-clan-name">${clanInfo.name}</span>
@@ -494,7 +518,6 @@ export class Game {
                 <div class="los-card-power-title">${isBruce ? 'Wildcard' : clanInfo.power}</div>
                 <div class="los-card-power-desc">${clanInfo.desc}</div>
                 ${card.copied_clan ? `<div class="los-copied-badge">Copied: ${card.copied_clan}</div>` : ''}
-                ${isPersisted ? '<div class="los-persisted-badge">🛡️ Persisted</div>' : ''}
             </div>
             <div class="los-card-corner-bottom">
                 <span class="los-card-strength-small">${isBruce ? '★' : card.strength}</span>
@@ -780,6 +803,8 @@ export class Game {
                 const refillEl = this.createCardElement(refill_card, 'recruit');
                 slotEl.appendChild(refillEl);
                 this.popInCard(refillEl);
+            } else {
+                slotEl.innerHTML = `<div class="los-empty-slot">Slot ${slot + 1}</div>`;
             }
         }
         // If current player recruited, add card to hand
@@ -808,7 +833,7 @@ export class Game {
 
     async notif_cardMustered(notif) {
         const args = this._getNotifArgs(notif);
-        const { player_id, card_id, clan, strength, is_face_up } = args;
+        const { player_id, card_id, clan, strength, is_face_up, power_activated } = args;
 
         // Locate card in hand if it was played from this client view
         const handCardEl = document.querySelector(`#los-hand-cards [data-card-id="${card_id}"]`);
@@ -837,6 +862,7 @@ export class Game {
                 clan: clan || 'hidden',
                 strength: strength || 0,
                 is_face_up: is_face_up ? 1 : 0,
+                power_activated: power_activated ? 1 : 0,
             };
             const newCardEl = this.createCardElement(cardData, 'army', player_id);
             armyRow.appendChild(newCardEl);
@@ -867,10 +893,12 @@ export class Game {
                 clan,
                 strength,
                 is_face_up: 0,
+                power_activated: 0,
             };
             const replacement = this.createCardElement(cardData, 'army', player_id);
             armyCardEl.replaceWith(replacement);
         }
+        this.updateLowestFaceUp();
     }
 
     async notif_powerActivated(notif) {
@@ -1077,11 +1105,12 @@ export class Game {
                 cardEl.parentNode.replaceChild(newEl, cardEl);
             }
         }
+        this.updateLowestFaceUp();
     }
 
     updateLowestFaceUp() {
         let minStrength = null;
-        document.querySelectorAll('#los-armies-container .los-card:not(.los-card-back)').forEach(el => {
+        document.querySelectorAll('#los-armies-container .los-card[data-is-face-up="1"]').forEach(el => {
             const strAttr = el.dataset.strength;
             if (strAttr !== undefined && strAttr !== '') {
                 const val = parseInt(strAttr, 10);

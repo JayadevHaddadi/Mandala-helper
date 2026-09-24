@@ -98,7 +98,14 @@ class Game extends \Bga\GameFramework\Table
 
         // Defensive migration: a table created before these columns existed won't get them from
         // CREATE TABLE IF NOT EXISTS alone (BGA keeps the same DB across restarts).
-        foreach (['power_activated' => 'TINYINT(1) NOT NULL DEFAULT 0', 'rank' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 0'] as $col => $def) {
+        $expectedCols = [
+            'power_activated' => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'rank' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 0',
+            'round_played' => 'TINYINT NOT NULL DEFAULT 0',
+            'persisted' => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'copied_clan' => 'VARCHAR(16) DEFAULT NULL',
+        ];
+        foreach ($expectedCols as $col => $def) {
             try {
                 $cols = self::getObjectListFromDb("SHOW COLUMNS FROM `card` LIKE '$col'");
                 if (empty($cols)) {
@@ -138,17 +145,8 @@ class Game extends \Bga\GameFramework\Table
         $result['victor_initiative'] = $vi;
         $result['clans'] = self::CLANS;
 
-        // Recruit row
-        $result['recruit'] = self::getObjectListFromDb(
-            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `slot`, `is_face_up` FROM `card` WHERE `location` = 'recruit' ORDER BY `location_arg` ASC"
-        );
-        // Hide details of face-down recruit cards
-        foreach ($result['recruit'] as &$c) {
-            if (!$c['is_face_up']) {
-                $c['clan'] = 'hidden';
-                $c['strength'] = 0;
-            }
-        }
+        // Recruit row (guarantee 5 slots)
+        $result['recruit'] = $this->ensureRecruitRow();
 
         // Supporter row
         $result['supporters'] = self::getObjectListFromDb(
@@ -183,9 +181,9 @@ class Game extends \Bga\GameFramework\Table
             $result['players'][$pId]['hand_count'] = (int) ($handCounts[$pId] ?? 0);
         }
 
-        // Armies for all players (face-down cards masked for everyone)
+        // Armies for all players (face-down cards masked for opponents, power_activated included for badges)
         $armyCards = self::getObjectListFromDb(
-            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up`, `copied_clan`, `persisted`, `round_played` FROM `card` WHERE `location` = 'army' ORDER BY `card_id` ASC"
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `player_id`, `is_face_up`, `copied_clan`, `persisted`, `power_activated`, `round_played` FROM `card` WHERE `location` = 'army' ORDER BY `card_id` ASC"
         );
         $armies = [];
         foreach ($result['players'] as $pId => $pData) {
@@ -304,21 +302,52 @@ class Game extends \Bga\GameFramework\Table
             $drawn = $this->drawCardsFromDeck(5, 'hand', (int)$pId);
         }
 
-        // 5. Deal 5 cards to Recruit row (all face-down initially)
-        for ($slot = 0; $slot < 5; $slot++) {
-            $this->drawCardFromDeck('recruit', $slot, 0);
-        }
+        // 5. Deal 5 cards to Recruit row (slot 0 face-up, rest face-down)
+        $this->dealRecruitRow();
 
         // 6. Deal N supporter cards (face-up, ensuring not all same strength)
         $this->dealSupporterRow(count($players));
 
-        // 7. Start Round 1: Flip 1st recruit card face-up!
-        self::DbQuery("UPDATE `card` SET `is_face_up` = 1 WHERE `location` = 'recruit' AND `location_arg` = 0");
-
-        // 8. Set active player to Victor's Initiative holder
+        // 7. Set active player to Victor's Initiative holder
         $this->gamestate->changeActivePlayer($firstPlayerId);
 
         return PlayerTurn::class;
+    }
+
+    public function dealRecruitRow(): array
+    {
+        self::DbQuery("UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0 WHERE `location` = 'recruit'");
+        for ($slot = 0; $slot < 5; $slot++) {
+            $this->drawCardFromDeck('recruit', $slot, ($slot === 0) ? 1 : 0);
+        }
+        return $this->ensureRecruitRow();
+    }
+
+    public function ensureRecruitRow(): array
+    {
+        $existing = self::getObjectListFromDb(
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `slot`, `is_face_up` FROM `card` WHERE `location` = 'recruit' ORDER BY `location_arg` ASC"
+        );
+        $presentSlots = array_map('intval', array_column($existing, 'slot'));
+        $round = (int) $this->globals->get('current_round', 1);
+
+        for ($s = 0; $s < 5; $s++) {
+            if (!in_array($s, $presentSlots, true)) {
+                $isFaceUp = ($s < $round) ? 1 : 0;
+                $this->drawCardFromDeck('recruit', $s, $isFaceUp);
+            }
+        }
+
+        $cards = self::getObjectListFromDb(
+            "SELECT `card_id`, `clan`, `strength`, `location_arg` AS `slot`, `is_face_up` FROM `card` WHERE `location` = 'recruit' ORDER BY `location_arg` ASC"
+        );
+        foreach ($cards as &$c) {
+            if (!(int)$c['is_face_up']) {
+                $c['clan'] = 'hidden';
+                $c['strength'] = 0;
+            }
+        }
+        return $cards;
     }
 
     public function dealSupporterRow(int $count): void
