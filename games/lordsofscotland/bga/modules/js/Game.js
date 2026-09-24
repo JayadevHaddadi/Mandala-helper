@@ -367,10 +367,10 @@ export class Game {
 
         // Sort so current player's army is rendered FIRST (directly under Your Hand)
         const playersList = Object.entries(this.gamedatas.players || {}).map(([key, p]) => {
-            const id = parseInt(p.player_id || p.id || key, 10);
+            const id = parseInt(p.player_id || key, 10);
             return {
                 id,
-                name: p.player_name || p.name || '',
+                name: p.player_name || p.name || `Player ${id}`,
                 color: p.player_color || p.color || 'ffffff',
                 score: p.player_score ?? p.score ?? 0,
                 player_no: parseInt(p.player_no || p.no || 0, 10)
@@ -385,15 +385,15 @@ export class Game {
             const pId = player.id;
             const playerArmy = (armies && (armies[pId] || armies[String(pId)])) ? (armies[pId] || armies[String(pId)]) : [];
 
+            const isMe = Boolean(myId && pId === myId);
+
             const armyBox = document.createElement('div');
             armyBox.id = `player-army-box-${pId}`;
-            armyBox.dataset.playerId = pId;
+            armyBox.setAttribute('data-player-id', String(pId));
             armyBox.className = 'los-panel los-army-box';
-            if (myId && pId === myId) {
+            if (isMe) {
                 armyBox.classList.add('los-my-army');
             }
-
-            const isMe = Boolean(myId && pId === myId);
 
             armyBox.innerHTML = `
                 <div class="los-army-header">
@@ -794,13 +794,12 @@ export class Game {
         // reveal_to_owner: private follow-up notif that tells the owner the true identity
         // of their own face-down card (the public broadcast never carries clan/strength).
         const showRealFace = is_face_up || reveal_to_owner;
-        // Remove from current player's hand if it's them, but capture where it was first
-        // so the card can visibly travel from hand into the army row.
-        // NOTE: Use isCurrentPlayer() — PHP sends player_id as int, BGA stores it as string.
-        const handCardEl = document.getElementById(`card-${card_id}`);
-        const isMine = this.isCurrentPlayer(player_id);
+        // Remove from hand if it was currently in this client's hand view
+        const handCardEl = document.querySelector(`#los-hand-cards #card-${card_id}`) || document.getElementById(`card-${card_id}`);
+        const isInHand = Boolean(handCardEl && handCardEl.closest('#los-hand-cards'));
+        const isMine = this.isCurrentPlayer(player_id) || isInHand;
         const musteredFromRect = (isMine && handCardEl) ? handCardEl.getBoundingClientRect() : null;
-        if (handCardEl && isMine) {
+        if (handCardEl && (isMine || isInHand)) {
             handCardEl.remove();
             const countEl = document.getElementById('los-hand-count');
             const handContainer = document.getElementById('los-hand-cards');

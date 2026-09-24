@@ -167,12 +167,19 @@ class Game extends \Bga\GameFramework\Table
             $c['can_activate_power'] = $this->canActivatePower((int)$c['strength'], $c['clan']);
         }
 
-        // Hand counts for all players
+        $result['current_player_id'] = (int) $currentPlayerId;
+        $scores = self::getCollectionFromDb("SELECT `player_id`, `player_score`, `player_no` FROM `player`", true);
         $handCounts = self::getCollectionFromDb(
             "SELECT `location_arg` AS `player_id`, COUNT(*) AS `count` FROM `card` WHERE `location` = 'hand' GROUP BY `location_arg`",
             true
         );
         foreach ($result['players'] as $pId => &$pData) {
+            $pIdInt = (int) $pId;
+            $pData['player_id'] = $pIdInt;
+            $pData['id'] = $pIdInt;
+            $pData['player_score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
+            $pData['score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
+            $pData['player_no'] = (int) ($scores[$pIdInt]['player_no'] ?? 0);
             $pData['hand_count'] = (int) ($handCounts[$pId] ?? 0);
         }
 
