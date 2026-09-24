@@ -364,6 +364,52 @@
     margin-top: 2px;
 }
 
+/* Staged Card for Local Confirmation / Undo */
+.los-card.los-card-staged {
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.6);
+    border: 2px dashed var(--los-gold-bright) !important;
+    animation: staged-pulse 1.8s infinite ease-in-out;
+    cursor: pointer;
+}
+
+@keyframes staged-pulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.6);
+        transform: translateY(0);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.95), 0 6px 16px rgba(0, 0, 0, 0.8);
+        transform: translateY(-2px);
+    }
+}
+
+.los-staged-badge {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 800;
+    background: #ff9800;
+    color: #1a1000;
+    box-shadow: 0 0 8px rgba(255, 152, 0, 0.8);
+    border: 1px solid #ffe082;
+    border-radius: 4px;
+    padding: 1px 6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    line-height: 1.4;
+}
+
+/* Source card in hand while staged */
+.los-card.los-card-staged-source {
+    opacity: 0.35;
+    filter: grayscale(0.5);
+    pointer-events: auto;
+}
+
 /* Card-travel animation (hand <-> recruit row <-> army) */
 .los-card.los-card-flying {
     z-index: 80;

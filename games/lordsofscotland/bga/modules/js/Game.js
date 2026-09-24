@@ -15,23 +15,10 @@ class PlayerTurn {
 
     onEnteringState(args, isCurrentPlayerActive) {
         args = args || {};
+        this.game.currentTurnArgs = args;
+        this.game.undoStagedMuster();
         if (isCurrentPlayerActive) {
-            const extraMuster = args.extra_muster_active;
-            if (extraMuster) {
-                this.bga.statusBar.setTitle(_('${you} may muster another clan card from your hand (Clan Makgill power)'));
-                if (typeof this.bga.statusBar.addActionButton === 'function') {
-                    this.bga.statusBar.addActionButton(
-                        _('Pass (Skip extra muster)'),
-                        () => this.bga.actions.performAction('actPass', {}),
-                        { color: 'secondary' }
-                    );
-                }
-            } else if (!args.can_recruit) {
-                this.bga.statusBar.setTitle(_('${you} must muster a clan card from your hand into your army (Hand full)'));
-            } else {
-                this.bga.statusBar.setTitle(_('${you} must recruit a card or muster a clan into your army'));
-            }
-
+            this.game.resetTurnPrompt(args);
             this.game.highlightRecruitCards(args.can_recruit);
             this.game.highlightHandCards(true, args.hand_cards);
         } else {
@@ -41,6 +28,7 @@ class PlayerTurn {
     }
 
     onLeavingState() {
+        this.game.undoStagedMuster();
         this.game.clearHighlights();
     }
 }
@@ -173,6 +161,10 @@ export class Game {
         this.bga.states.register('DraftSupporter', new DraftSupporter(this, bga));
 
         this.selectedHandCardId = null;
+        this.stagedMuster = null;
+        this.currentTurnArgs = null;
+        this.lastHandCards = null;
+        this.lastCanRecruit = true;
     }
 
     isCurrentPlayerActive() {
@@ -590,14 +582,43 @@ export class Game {
         el.addEventListener('animationend', () => el.classList.remove('los-card-pop-in'), { once: true });
     }
 
+    resetTurnPrompt(args) {
+        args = args || this.currentTurnArgs || {};
+        const extraMuster = args.extra_muster_active;
+        if (extraMuster) {
+            this.bga.statusBar.setTitle(_('${you} may muster another clan card from your hand (Clan Makgill power)'));
+            if (typeof this.bga.statusBar.addActionButton === 'function') {
+                this.bga.statusBar.addActionButton(
+                    _('Pass (Skip extra muster)'),
+                    () => this.bga.actions.performAction('actPass', {}),
+                    { color: 'secondary' }
+                );
+            }
+        } else if (!args.can_recruit) {
+            this.bga.statusBar.setTitle(_('${you} must muster a clan card from your hand into your army (Hand full)'));
+        } else {
+            this.bga.statusBar.setTitle(_('${you} must recruit a card or muster a clan into your army'));
+        }
+    }
+
     onHandCardClick(card) {
         if (!this.isCurrentPlayerActive()) return;
+
+        // If a card is already staged, undo it first
+        if (this.stagedMuster) {
+            const wasStagedId = this.stagedMuster.card.card_id;
+            this.undoStagedMuster();
+            if (wasStagedId === card.card_id) {
+                return;
+            }
+        }
 
         // Toggle selection
         if (this.selectedHandCardId === card.card_id) {
             this.selectedHandCardId = null;
             document.querySelectorAll('#los-hand-cards .los-card.selected').forEach(c => c.classList.remove('selected'));
             this.clearActionButtons();
+            this.resetTurnPrompt();
             return;
         }
 
@@ -618,9 +639,7 @@ export class Game {
                 ? _('Muster Face-Up (Activate ${power})').replace('${power}', clanInfo.power)
                 : _('Muster Face-Up (${clan})').replace('${clan}', clanInfo.name),
             () => {
-                this.clearActionButtons();
-                this.selectedHandCardId = null;
-                this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 1 });
+                this.stageMuster(card, 1);
             },
             { color: canPower ? 'primary' : 'secondary' }
         );
@@ -628,9 +647,7 @@ export class Game {
         this.bga.statusBar.addActionButton(
             _('Muster Face-Down (Hidden)'),
             () => {
-                this.clearActionButtons();
-                this.selectedHandCardId = null;
-                this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 0 });
+                this.stageMuster(card, 0);
             },
             { color: 'secondary' }
         );
@@ -641,18 +658,137 @@ export class Game {
                 if (cardEl) cardEl.classList.remove('selected');
                 this.selectedHandCardId = null;
                 this.clearActionButtons();
+                this.resetTurnPrompt();
             },
             { color: 'secondary' }
         );
     }
 
+    stageMuster(card, face_up) {
+        this.undoStagedMuster();
+
+        const myId = this.getCurrentPlayerId();
+        if (!myId) return;
+
+        this.stagedMuster = { card, face_up };
+
+        // 1. Mark source card in hand as staged
+        const handCardEl = document.querySelector(`#los-hand-cards [data-card-id="${card.card_id}"]`);
+        if (handCardEl) {
+            handCardEl.classList.add('los-card-staged-source');
+        }
+
+        // 2. Stage card into active player's army row
+        const armyRow = document.getElementById(`army-cards-${myId}`);
+        if (armyRow) {
+            const emptyMsg = armyRow.querySelector('.los-empty-army');
+            if (emptyMsg) emptyMsg.style.display = 'none';
+
+            const canPower = Boolean(card.can_activate_power) && (face_up === 1);
+            const stagedCardData = {
+                card_id: `staged-${card.card_id}`,
+                clan: card.clan,
+                strength: card.strength,
+                is_face_up: face_up,
+                power_activated: canPower ? 1 : 0,
+            };
+
+            const stagedEl = this.createCardElement(stagedCardData, 'army', myId);
+            stagedEl.id = `card-army-staged-${card.card_id}`;
+            stagedEl.classList.add('los-card-staged');
+
+            // Add Staged badge above card
+            const stagedBadge = document.createElement('div');
+            stagedBadge.className = 'los-staged-badge';
+            stagedBadge.textContent = '⏳ Staged';
+            stagedEl.appendChild(stagedBadge);
+
+            stagedEl.title = _('Staged card — click Undo or click this card to return it to your hand');
+            stagedEl.addEventListener('click', () => this.undoStagedMuster());
+
+            armyRow.appendChild(stagedEl);
+            this.popInCard(stagedEl);
+        }
+
+        // 3. Status bar prompt and confirmation buttons
+        this.clearActionButtons();
+
+        const clanInfo = this.gamedatas.clans[card.clan] || { name: card.clan, power: '' };
+        const canPower = Boolean(card.can_activate_power) && (face_up === 1);
+        const modeLabel = (face_up === 1)
+            ? (canPower ? `${clanInfo.name} (${card.strength}) — ⚡ ${clanInfo.power}` : `${clanInfo.name} (${card.strength})`)
+            : _('Face-Down (Hidden)');
+
+        this.bga.statusBar.setTitle(_('Confirm muster: ${mode}?').replace('${mode}', modeLabel));
+
+        this.bga.statusBar.addActionButton(
+            _('✓ Confirm Muster'),
+            () => this.confirmStagedMuster(),
+            { color: 'primary' }
+        );
+
+        this.bga.statusBar.addActionButton(
+            _('↩ Undo'),
+            () => this.undoStagedMuster(),
+            { color: 'secondary' }
+        );
+    }
+
+    undoStagedMuster() {
+        if (!this.stagedMuster) return;
+
+        const { card } = this.stagedMuster;
+        this.stagedMuster = null;
+
+        // Remove staged card from army
+        const stagedEl = document.getElementById(`card-army-staged-${card.card_id}`);
+        if (stagedEl) stagedEl.remove();
+
+        // Restore empty army notice if army has no real cards
+        const myId = this.getCurrentPlayerId();
+        if (myId) {
+            const armyRow = document.getElementById(`army-cards-${myId}`);
+            if (armyRow && armyRow.querySelectorAll('.los-card:not(.los-card-staged)').length === 0) {
+                const emptyMsg = armyRow.querySelector('.los-empty-army');
+                if (emptyMsg) emptyMsg.style.display = '';
+            }
+        }
+
+        // Restore hand card
+        const handCardEl = document.querySelector(`#los-hand-cards [data-card-id="${card.card_id}"]`);
+        if (handCardEl) {
+            handCardEl.classList.remove('los-card-staged-source');
+            handCardEl.classList.remove('selected');
+        }
+        this.selectedHandCardId = null;
+
+        // Restore turn prompt and highlights
+        this.clearActionButtons();
+        this.resetTurnPrompt(this.currentTurnArgs);
+        this.highlightHandCards(true, this.lastHandCards || null);
+        this.highlightRecruitCards(this.lastCanRecruit ?? true);
+    }
+
+    confirmStagedMuster() {
+        if (!this.stagedMuster) return;
+
+        const { card, face_up } = this.stagedMuster;
+        const cardId = card.card_id;
+        this.clearActionButtons();
+        this.selectedHandCardId = null;
+
+        this.bga.actions.performAction('actMuster', { card_id: cardId, face_up: face_up });
+    }
+
     highlightRecruitCards(canRecruit) {
+        this.lastCanRecruit = canRecruit;
         document.querySelectorAll('#los-recruit-row .los-card').forEach(el => {
             el.classList.remove('highlight-action');
             if (canRecruit) {
                 el.classList.add('highlight-action');
                 el.onclick = () => {
                     if (!this.isCurrentPlayerActive()) return;
+                    this.undoStagedMuster();
                     this.selectedHandCardId = null;
                     document.querySelectorAll('#los-hand-cards .los-card.selected').forEach(c => c.classList.remove('selected'));
                     this.clearActionButtons();
@@ -667,6 +803,7 @@ export class Game {
 
     highlightHandCards(canMuster, handCards) {
         if (Array.isArray(handCards)) {
+            this.lastHandCards = handCards;
             const powerMap = {};
             handCards.forEach(c => {
                 powerMap[c.card_id] = Boolean(c.can_activate_power);
@@ -851,6 +988,10 @@ export class Game {
         // Add to player's army
         const armyRow = document.getElementById(`army-cards-${player_id}`);
         if (armyRow) {
+            const stagedEl = document.getElementById(`card-army-staged-${card_id}`);
+            if (stagedEl) stagedEl.remove();
+            this.stagedMuster = null;
+
             const emptyMsg = armyRow.querySelector('.los-empty-army');
             if (emptyMsg) emptyMsg.remove();
 
@@ -1110,7 +1251,7 @@ export class Game {
 
     updateLowestFaceUp() {
         let minStrength = null;
-        document.querySelectorAll('#los-armies-container .los-card[data-is-face-up="1"]').forEach(el => {
+        document.querySelectorAll('#los-armies-container .los-card[data-is-face-up="1"]:not(.los-card-staged)').forEach(el => {
             const strAttr = el.dataset.strength;
             if (strAttr !== undefined && strAttr !== '') {
                 const val = parseInt(strAttr, 10);
