@@ -51,8 +51,8 @@ A single, fast delta-sync script replaces all individual sync scripts. It compar
 # Push Fight (syncs games/pushfight/bga -> remote pushfighttest)
 python tools/sync.py pushfighttest
 
-# Omega (syncs games/omega/bga -> remote omegatest)
-python tools/sync.py omegatest
+# Omega Production (syncs games/omega/bga -> remote omega)
+python tools/sync.py omega
 
 # Mandala Production (syncs games/mandala/bga-prod -> remote mandala)
 python tools/sync.py mandala

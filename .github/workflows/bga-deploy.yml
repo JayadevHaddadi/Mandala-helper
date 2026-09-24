@@ -103,7 +103,7 @@ jobs:
 
             if [ "$DEPLOYED" -eq 0 ]; then
               echo "No specific game folder modified. Deploying active test games..."
-              python tools/sync.py omegatest
+              python tools/sync.py omega
               python tools/sync.py yavalath
               python tools/sync.py lordsofscotlandtest
             fi

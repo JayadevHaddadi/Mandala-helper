@@ -2,7 +2,7 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * omegatest implementation : © Jayadev Haddadi
+ * omega implementation : © Jayadev Haddadi
  *
  * Game.php - Core Game Engine for Omega
  *------

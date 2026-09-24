@@ -3,7 +3,7 @@
 > **Game Design**: Néstor Romeral Andrés (2010)  
 > **Publisher**: nestorgames  
 > **Licensing**: Approved by Néstor Romeral Andrés (SVGs provided)  
-> **BGA Project**: `omegatest`
+> **BGA Project**: `omega` (prod)
 
 ---
 

@@ -1,7 +1,7 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * omegatest implementation : © Jayadev Haddadi
+ * omega implementation : © Jayadev Haddadi
  *
  * Game.js - Client Interface for Omega
  *------
