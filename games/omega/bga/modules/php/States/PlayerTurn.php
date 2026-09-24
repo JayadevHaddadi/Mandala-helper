@@ -45,6 +45,65 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
+    public function actPlaceStones(string|array $stones, int $activePlayerId, array $args): string
+    {
+        if (is_string($stones)) {
+            $decoded = json_decode($stones, true);
+            $stones = is_array($decoded) ? $decoded : [];
+        }
+
+        $allColors = $this->game->getActiveColorsInGame();
+        $expectedCount = count($allColors);
+
+        if (count($stones) !== $expectedCount) {
+            throw new UserException(clienttranslate("You must place exactly one stone of each color."));
+        }
+
+        $colorsInMove = [];
+        $coordsInMove = [];
+        foreach ($stones as $st) {
+            $q = (int) ($st['q'] ?? 999);
+            $r = (int) ($st['r'] ?? 999);
+            $color = (string) ($st['color'] ?? '');
+
+            if (!in_array($color, $allColors, true)) {
+                throw new UserException(clienttranslate("Invalid stone color."));
+            }
+            if (in_array($color, $colorsInMove, true)) {
+                throw new UserException(clienttranslate("You cannot place multiple stones of the same color."));
+            }
+            $colorsInMove[] = $color;
+
+            $key = "{$q}_{$r}";
+            if (isset($coordsInMove[$key])) {
+                throw new UserException(clienttranslate("You cannot place multiple stones on the same cell."));
+            }
+            $coordsInMove[$key] = true;
+
+            $this->game->placeStone($q, $r, $color, $activePlayerId);
+        }
+
+        $this->globals->set('placed_this_turn', []);
+        $this->globals->set('placed_coords_this_turn', []);
+        $this->globals->set('last_placed_coords', $stones);
+
+        $scores = $this->game->calculateAllScores();
+        foreach ($scores as $pId => $data) {
+            $this->bga->playerScore->set((int)$pId, (int)$data['score']);
+        }
+
+        $this->game->notifyAllPlayers('turnConfirmed', clienttranslate('${player_name} placed their stones and confirmed their turn'), [
+            'player_id' => $activePlayerId,
+            'player_name' => $this->game->loadPlayersBasicInfos()[$activePlayerId]['player_name'],
+            'stones' => $stones,
+            'last_placed_coords' => $stones,
+            'scores' => $scores,
+        ]);
+
+        return NextPlayer::class;
+    }
+
+    #[PossibleAction]
     public function actPlaceStone(int $q, int $r, string $color, int $activePlayerId, array $args): ?string
     {
         $placedThisTurn = $this->globals->get('placed_this_turn', []);
@@ -109,7 +168,7 @@ class PlayerTurn extends GameState
     {
         $placedCoords = $this->globals->get('placed_coords_this_turn', []);
         if (empty($placedCoords)) {
-            throw new UserException(clienttranslate("No stones placed this turn to reset."));
+            return null;
         }
 
         foreach ($placedCoords as $pt) {

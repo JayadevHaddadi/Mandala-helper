@@ -144,6 +144,9 @@ class PlayerTurn {
         this.game.currentArgs = args;
         this.game.clearHighlights();
 
+        // Fresh turn: reset local staging
+        this.game.stagedStones = [];
+
         if (args.last_placed_coords !== undefined) {
             this.game.updateLastPlacedMarkers(args.last_placed_coords);
         }
@@ -160,13 +163,15 @@ class PlayerTurn {
         this.game.clearActionButtons();
 
         if (active) {
-            const remaining = args.remaining_colors || ['white', 'black'];
-            const placed = args.placed_this_turn || [];
+            const staged = this.game.stagedStones || [];
+            const allColors = this.game.activeColors || ['white', 'black'];
+            const stagedColors = staged.map(s => s.color);
+            const remaining = allColors.filter(c => !stagedColors.includes(c));
 
             if (remaining.length > 0) {
                 const currentColor = remaining[0];
-                const stepNum = placed.length + 1;
-                const totalSteps = stepNum + remaining.length - 1;
+                const stepNum = staged.length + 1;
+                const totalSteps = allColors.length;
 
                 this.bga.statusBar.setTitle(
                     _('${you} must place a <b>${color}</b> stone (${step}/${total})'),
@@ -177,19 +182,27 @@ class PlayerTurn {
                         i18n: ['color']
                     }
                 );
+            } else {
+                // All stones staged for this turn!
+                this.bga.statusBar.setTitle(_('All stones placed! Review your turn, then click <b>Confirm Turn</b>.'));
+
+                this.game.addActionButton('btnConfirmTurn', _('✓ Confirm Turn'), () => {
+                    this.game.confirmTurn();
+                }, 'primary');
             }
 
-            // Pie Rule swap button (only on turn 2 before any stones placed)
-            if (args.pie_rule_available) {
+            // Pie Rule swap button (only on turn 2 before any stones placed/staged)
+            if (args && args.pie_rule_available && staged.length === 0) {
                 this.game.addActionButton('btnSwapColors', _('Swap Colors (Pie Rule)'), () => {
                     this.bga.actions.performAction('actSwapColors', {});
                 }, 'secondary');
             }
 
-            // Reset turn placements button
-            if (placed.length > 0) {
+            // Reset turn button (whenever at least 1 stone is staged or server has partial placements)
+            const serverPlacedCount = (args && args.placed_this_turn && args.placed_this_turn.length) || 0;
+            if (staged.length > 0 || serverPlacedCount > 0) {
                 this.game.addActionButton('btnUndoTurn', _('↺ Reset Turn'), () => {
-                    this.bga.actions.performAction('actUndoTurn', {});
+                    this.game.resetLocalTurn();
                 }, 'danger');
             }
         } else {
@@ -212,6 +225,7 @@ export class Game {
         this.boardData = {};
         this.playerColors = {};
         this.activeColors = ['white', 'black'];
+        this.stagedStones = [];
 
         // Register State Handlers
         this.playerTurn = new PlayerTurn(this, bga);
@@ -252,14 +266,18 @@ export class Game {
         const existing = document.getElementById(id);
         if (existing) return;
         if (!this.bga?.statusBar?.addActionButton) return;
+        let btn = null;
         try {
-            this.bga.statusBar.addActionButton(text, callback, { color: color, id: id });
+            btn = this.bga.statusBar.addActionButton(text, callback, { color: color, id: id });
         } catch (e) {
             try {
-                this.bga.statusBar.addActionButton(id, text, callback, color);
+                btn = this.bga.statusBar.addActionButton(id, text, callback, color);
             } catch (e2) {
                 console.warn('Could not add action button:', e2);
             }
+        }
+        if (btn && btn instanceof HTMLElement && !btn.id) {
+            btn.id = id;
         }
     }
 
@@ -430,16 +448,21 @@ export class Game {
         if (!this.isCurrentPlayerActive()) return;
 
         const key = `${q}_${r}`;
+        // If already occupied by a placed or staged stone, ignore
         if (this.boardData[key] && this.boardData[key].color) return;
 
-        const remaining = this.currentArgs?.remaining_colors || this.activeColors;
-        if (!remaining.length) return;
+        const staged = this.stagedStones || [];
+        const stagedColors = staged.map(s => s.color);
+        const remaining = this.activeColors.filter(c => !stagedColors.includes(c));
+        if (!remaining.length) return; // All stones already staged, awaiting confirm or reset
 
         const colorToPlace = remaining[0];
         sounds.playPlace();
 
-        // 1. Optimistic UI update: render stone and shine immediately (0ms visual feedback)
-        this.boardData[key] = { q, r, color: colorToPlace };
+        // 1. Stage locally (0ms instantaneous visual feedback)
+        this.stagedStones.push({ q, r, color: colorToPlace });
+        this.boardData[key] = { q, r, color: colorToPlace, staged: true };
+
         const cell = document.querySelector(`.omega_cell[data-q="${q}"][data-r="${r}"]`);
         if (cell) {
             const stone = cell.querySelector('.omega_stone');
@@ -456,28 +479,12 @@ export class Game {
             cell.classList.remove('omega_valid_target');
         }
 
-        // 2. Advance local turn state immediately so next color is ready to click without waiting
-        const placed = [...(this.currentArgs?.placed_this_turn || []), colorToPlace];
-        const nextRemaining = this.getRemainingColors(placed);
-        if (this.currentArgs) {
-            this.currentArgs.placed_this_turn = placed;
-            this.currentArgs.remaining_colors = nextRemaining;
-            this.playerTurn.updateControls(this.currentArgs, true);
-        }
+        // 2. Advance controls and status bar prompts
+        this.playerTurn.updateControls(this.currentArgs, true);
 
-        if (nextRemaining.length > 0) {
-            this.updateBoardInteractions(true);
-        } else {
-            // All stones placed for this turn; await server confirmation and state switch
-            this.updateBoardInteractions(false);
-        }
-
-        // 3. Dispatch to server
-        this.bga.actions.performAction('actPlaceStone', {
-            q: q,
-            r: r,
-            color: colorToPlace
-        });
+        // 3. Update board interactions (disable cell targeting if all stones are now staged)
+        const nextRemaining = this.activeColors.filter(c => !this.stagedStones.map(s => s.color).includes(c));
+        this.updateBoardInteractions(nextRemaining.length > 0);
     }
 
     onCellHover(cellEl, isHover) {
@@ -488,7 +495,9 @@ export class Game {
         if (!ghost || (stone && stone.style.display !== 'none')) return;
 
         if (isHover) {
-            const remaining = this.currentArgs?.remaining_colors || this.activeColors;
+            const staged = this.stagedStones || [];
+            const stagedColors = staged.map(s => s.color);
+            const remaining = this.activeColors.filter(c => !stagedColors.includes(c));
             if (remaining.length) {
                 const nextColor = remaining[0];
                 ghost.setAttribute('class', `omega_ghost_stone omega_ghost_${nextColor}`);
@@ -498,6 +507,57 @@ export class Game {
         } else {
             ghost.style.display = 'none';
         }
+    }
+
+    confirmTurn() {
+        if (!this.stagedStones || this.stagedStones.length !== this.activeColors.length) {
+            return;
+        }
+
+        const stonesToSend = [...this.stagedStones];
+        this.clearActionButtons();
+        this.bga.statusBar.setTitle(_('Submitting turn...'));
+        this.updateBoardInteractions(false);
+
+        this.bga.actions.performAction('actPlaceStones', {
+            stones: JSON.stringify(stonesToSend)
+        });
+    }
+
+    resetLocalTurn() {
+        sounds.playReset();
+
+        // 1. Remove all staged stones from boardData and DOM (0ms instantaneous reset)
+        if (this.stagedStones && this.stagedStones.length > 0) {
+            this.stagedStones.forEach(st => {
+                const key = `${st.q}_${st.r}`;
+                delete this.boardData[key];
+
+                const cell = document.querySelector(`.omega_cell[data-q="${st.q}"][data-r="${st.r}"]`);
+                if (cell) {
+                    const stone = cell.querySelector('.omega_stone');
+                    const shine = cell.querySelector('.omega_stone_shine');
+                    if (stone) {
+                        stone.style.display = 'none';
+                        stone.setAttribute('class', 'omega_stone');
+                    }
+                    if (shine) {
+                        shine.style.display = 'none';
+                    }
+                }
+            });
+            this.stagedStones = [];
+        }
+
+        // 2. If server had any partial placements, reset server state too
+        if (this.currentArgs && this.currentArgs.placed_this_turn && this.currentArgs.placed_this_turn.length > 0) {
+            this.bga.actions.performAction('actUndoTurn', {});
+            this.currentArgs.placed_this_turn = [];
+        }
+
+        // 3. Refresh controls and board interactions
+        this.playerTurn.updateControls(this.currentArgs, true);
+        this.updateBoardInteractions(true);
     }
 
     updateBoardInteractions(active) {
@@ -594,7 +654,7 @@ export class Game {
         if (typeof gameui !== 'undefined' && typeof gameui.removeActionButtons === 'function') {
             gameui.removeActionButtons();
         }
-        ['btnSwapColors', 'btnUndoTurn'].forEach(id => {
+        ['btnSwapColors', 'btnUndoTurn', 'btnConfirmTurn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.remove();
         });
@@ -613,8 +673,49 @@ export class Game {
         } else if (typeof dojo !== 'undefined' && typeof dojo.subscribe === 'function') {
             dojo.subscribe('stonePlaced', this, 'notif_stonePlaced');
             dojo.subscribe('turnReset', this, 'notif_turnReset');
+            dojo.subscribe('turnConfirmed', this, 'notif_turnConfirmed');
             dojo.subscribe('colorsSwapped', this, 'notif_colorsSwapped');
             dojo.subscribe('endGameScores', this, 'notif_endGameScores');
+        }
+    }
+
+    async notif_turnConfirmed(notif) {
+        const args = this._getNotifArgs(notif);
+        const { stones, scores, last_placed_coords, player_id } = args;
+
+        this.stagedStones = [];
+
+        (stones || []).forEach(st => {
+            const key = `${st.q}_${st.r}`;
+            this.boardData[key] = { q: st.q, r: st.r, color: st.color };
+
+            const cell = document.querySelector(`.omega_cell[data-q="${st.q}"][data-r="${st.r}"]`);
+            if (cell) {
+                const stone = cell.querySelector('.omega_stone');
+                const shine = cell.querySelector('.omega_stone_shine');
+                const ghost = cell.querySelector('.omega_ghost_stone');
+                if (ghost) ghost.style.display = 'none';
+                if (stone) {
+                    stone.setAttribute('class', `omega_stone omega_stone_${st.color}`);
+                    stone.style.display = 'block';
+                }
+                if (shine) {
+                    shine.style.display = 'block';
+                }
+                cell.classList.remove('omega_valid_target');
+            }
+        });
+
+        if (last_placed_coords !== undefined) {
+            this.updateLastPlacedMarkers(last_placed_coords);
+        }
+
+        if (String(player_id) !== String(this.getCurrentPlayerId())) {
+            sounds.playPlace();
+        }
+
+        if (scores) {
+            this.updateScoresDisplay(scores);
         }
     }
 
