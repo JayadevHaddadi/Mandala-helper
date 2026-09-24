@@ -900,11 +900,21 @@ export class Game {
         const { player_id, card_id, new_score } = args;
         // Remove from supporter row
         const cardEl = document.getElementById(`card-${card_id}`);
-        if (cardEl) cardEl.remove();
+        if (cardEl) {
+            this.popInCard(cardEl);
+            setTimeout(() => cardEl.remove(), 250);
+        }
 
-        // Update score
+        // Update score in player army header
         const scoreEl = document.getElementById(`score-${player_id}`);
         if (scoreEl) scoreEl.textContent = new_score;
+
+        // Update score in BGA sidebar player panel
+        if (this.bga?.playerPanels && typeof this.bga.playerPanels.setScore === 'function') {
+            this.bga.playerPanels.setScore(player_id, new_score);
+        } else if (typeof gameui !== 'undefined' && typeof gameui.scoreCtrl?.[player_id]?.setValue === 'function') {
+            gameui.scoreCtrl[player_id].setValue(new_score);
+        }
     }
 
     async notif_newSkirmishStarted(notif) {

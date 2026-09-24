@@ -21,11 +21,8 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
 
     public function onEnteringState(int $activePlayerId): string
     {
-        $started = (int) $this->game->globals->get('skirmish_resolution_started', 0);
-
-        if ($started === 0) {
-            // 1. Reveal all face-down army cards
-            Game::DbQuery("UPDATE `card` SET `is_face_up` = 1 WHERE `location` = 'army'");
+        // 1. Reveal all face-down army cards
+        Game::DbQuery("UPDATE `card` SET `is_face_up` = 1 WHERE `location` = 'army'");
 
             // 2. Fetch players and compute army strengths
             $players = Game::getCollectionFromDb("SELECT `player_id` AS `id`, `player_name` AS `name` FROM `player`");
@@ -92,32 +89,49 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                 $r['rank'] = $idx + 1;
             }
 
-            $this->game->globals->set('skirmish_rankings', $rankings);
-            $this->game->globals->set('current_draft_index', 0);
-            $this->game->globals->set('skirmish_resolution_started', 1);
-
             $this->notify->all("skirmishResolved", clienttranslate('=== The 5 rounds are over! Skirmish armies are revealed ==='), [
                 'rankings' => $rankings,
             ]);
-        }
 
-        $rankings = (array) $this->game->globals->get('skirmish_rankings', []);
-        $currentIndex = (int) $this->game->globals->get('current_draft_index', 0);
-        $supportersCount = (int) Game::getUniqueValueFromDb("SELECT COUNT(*) FROM `card` WHERE `location` = 'supporter'");
-
-        // Find next eligible player who has at least 1 card in their army
-        while ($currentIndex < count($rankings) && $supportersCount > 0) {
-            $candidate = $rankings[$currentIndex];
-            if ($candidate['card_count'] > 0) {
-                // This player can draft!
-                $draftsCount = $candidate['has_cochrane'] ? 2 : 1;
-                $this->game->globals->set('drafts_remaining_for_player', $draftsCount);
-                $this->game->globals->set('current_draft_index', $currentIndex);
-                $this->game->gamestate->changeActivePlayer((int)$candidate['player_id']);
-                return DraftSupporter::class;
+        // 3. Automated Supporter Drafting: award highest supporter(s) in rank order
+        foreach ($rankings as $candidate) {
+            if ($candidate['card_count'] <= 0) {
+                continue;
             }
-            $currentIndex++;
-            $this->game->globals->set('current_draft_index', $currentIndex);
+            $pId = (int) $candidate['player_id'];
+            $pName = $candidate['name'];
+            $draftCount = $candidate['has_cochrane'] ? 2 : 1;
+
+            for ($d = 0; $d < $draftCount; $d++) {
+                $supporter = Game::getObjectFromDb(
+                    "SELECT * FROM `card` WHERE `location` = 'supporter' ORDER BY `strength` DESC, `card_id` ASC LIMIT 1"
+                );
+                if (!$supporter) {
+                    break;
+                }
+                $cardId = (int) $supporter['card_id'];
+                $strength = (int) $supporter['strength'];
+                $clan = $supporter['clan'];
+                $clanName = Game::CLANS[$clan]['name'];
+
+                // Move to score pile
+                Game::DbQuery("UPDATE `card` SET `location` = 'score', `location_arg` = $pId, `is_face_up` = 1 WHERE `card_id` = $cardId");
+                $this->game->playerScore->inc($pId, $strength);
+                $newScore = (int) $this->game->playerScore->get($pId);
+                $this->game->playerStats->inc('supporters_claimed', 1, $pId);
+
+                $bonusText = ($candidate['has_cochrane'] && $d === 1) ? clienttranslate(' (Clan Cochrane bonus)') : '';
+                $this->notify->all("supporterDrafted", clienttranslate('${player_name} claims ${clan_name} (${strength} pts) from Supporter row${bonus_text} (Total Score: ${new_score})'), [
+                    'player_id' => $pId,
+                    'player_name' => $pName,
+                    'card_id' => $cardId,
+                    'clan' => $clan,
+                    'clan_name' => $clanName,
+                    'strength' => $strength,
+                    'new_score' => $newScore,
+                    'bonus_text' => $bonusText,
+                ]);
+            }
         }
 
         // Supporter drafting is complete!
@@ -180,7 +194,6 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         $this->game->globals->set('current_round', 1);
         $this->game->globals->set('turns_taken_this_round', 0);
         $this->game->globals->set('extra_muster_active', 0);
-        $this->game->globals->set('skirmish_resolution_started', 0);
 
         // Victor starts next skirmish
         $this->game->gamestate->changeActivePlayer($winnerId);

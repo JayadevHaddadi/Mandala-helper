@@ -168,7 +168,7 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $result['current_player_id'] = (int) $currentPlayerId;
-        $scores = self::getCollectionFromDb("SELECT `player_id`, `player_score`, `player_no` FROM `player`", true);
+        $scores = self::getCollectionFromDb("SELECT `player_id`, `player_score`, `player_no` FROM `player`");
         $handCounts = self::getCollectionFromDb(
             "SELECT `location_arg` AS `player_id`, COUNT(*) AS `count` FROM `card` WHERE `location` = 'hand' GROUP BY `location_arg`",
             true
@@ -232,17 +232,19 @@ class Game extends \Bga\GameFramework\Table
         $default_colors = $gameinfos['player_colors'];
 
         $query_values = [];
+        $playerNo = 1;
         foreach ($players as $player_id => $player) {
-            $query_values[] = vsprintf("(%s, '%s', '%s')", [
+            $query_values[] = vsprintf("(%s, '%s', '%s', %d)", [
                 $player_id,
                 array_shift($default_colors),
                 addslashes($player["player_name"]),
+                $playerNo++,
             ]);
         }
 
         static::DbQuery(
             sprintf(
-                "INSERT INTO `player` (`player_id`, `player_color`, `player_name`) VALUES %s",
+                "INSERT INTO `player` (`player_id`, `player_color`, `player_name`, `player_no`) VALUES %s",
                 implode(",", $query_values)
             )
         );
