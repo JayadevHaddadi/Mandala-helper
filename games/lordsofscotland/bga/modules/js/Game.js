@@ -365,17 +365,24 @@ export class Game {
 
         const myId = this.getCurrentPlayerId();
 
-        // Sort so current player's army is rendered FIRST (directly under Your Hand)
-        const playersList = Object.entries(this.gamedatas.players || {}).map(([key, p]) => {
-            const id = parseInt(p.player_id || key, 10);
-            return {
+        // Build list of distinct players
+        const seenIds = new Set();
+        const playersList = [];
+        for (const [key, p] of Object.entries(this.gamedatas.players || {})) {
+            const id = parseInt(p.player_id || p.id || key, 10);
+            if (!id || seenIds.has(id)) continue;
+            seenIds.add(id);
+            playersList.push({
                 id,
                 name: p.player_name || p.name || `Player ${id}`,
                 color: p.player_color || p.color || 'ffffff',
                 score: p.player_score ?? p.score ?? 0,
                 player_no: parseInt(p.player_no || p.no || 0, 10)
-            };
-        }).sort((a, b) => {
+            });
+        }
+
+        // Sort so current player's army is rendered FIRST (directly under Your Hand)
+        playersList.sort((a, b) => {
             if (myId && a.id === myId) return -1;
             if (myId && b.id === myId) return 1;
             return a.player_no - b.player_no;
@@ -449,11 +456,13 @@ export class Game {
 
     createCardElement(card, context, playerId = null) {
         const el = document.createElement('div');
-        el.id = `card-${card.card_id}`;
+        el.id = (context === 'army' && playerId) ? `card-army-${playerId}-${card.card_id}` : `card-${context}-${card.card_id}`;
         el.className = `los-card clan-${card.clan}`;
-        el.dataset.cardId = card.card_id;
+        el.dataset.cardId = String(card.card_id);
         el.dataset.clan = card.clan;
-        el.dataset.strength = card.strength;
+        el.dataset.strength = String(card.strength);
+        el.dataset.context = context;
+        if (playerId) el.dataset.playerId = String(playerId);
 
         if (card.clan === 'hidden') {
             el.classList.add('los-card-back');
@@ -528,17 +537,18 @@ export class Game {
         const toRect = el.getBoundingClientRect();
         const dx = fromRect.left - toRect.left;
         const dy = fromRect.top - toRect.top;
-        if (!dx && !dy) return;
+        if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
 
         el.classList.add('los-card-flying');
         el.style.transition = 'none';
-        el.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+        el.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
+
+        // Force browser to commit initial transform
+        void el.offsetHeight;
 
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                el.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1)';
-                el.style.transform = 'translate(0, 0) scale(1)';
-            });
+            el.style.transition = 'transform 0.42s cubic-bezier(0.25, 1, 0.5, 1)';
+            el.style.transform = 'translate(0, 0) scale(1)';
         });
 
         const cleanup = () => {
@@ -547,8 +557,8 @@ export class Game {
             el.classList.remove('los-card-flying');
             el.removeEventListener('transitionend', cleanup);
         };
-        el.addEventListener('transitionend', cleanup);
-        setTimeout(cleanup, 550);
+        el.addEventListener('transitionend', cleanup, { once: true });
+        setTimeout(cleanup, 500);
     }
 
     popInCard(el) {
@@ -569,7 +579,7 @@ export class Game {
         }
 
         document.querySelectorAll('#los-hand-cards .los-card.selected').forEach(c => c.classList.remove('selected'));
-        const cardEl = document.getElementById(`card-${card.card_id}`);
+        const cardEl = document.querySelector(`#los-hand-cards [data-card-id="${card.card_id}"]`);
         if (cardEl) cardEl.classList.add('selected');
 
         this.selectedHandCardId = card.card_id;
@@ -584,13 +594,21 @@ export class Game {
             canPower 
                 ? _('Muster Face-Up (Activate ${power})').replace('${power}', clanInfo.power)
                 : _('Muster Face-Up (${clan})').replace('${clan}', clanInfo.name),
-            () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 1 }),
+            () => {
+                this.clearActionButtons();
+                this.selectedHandCardId = null;
+                this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 1 });
+            },
             { color: canPower ? 'primary' : 'secondary' }
         );
 
         this.bga.statusBar.addActionButton(
             _('Muster Face-Down (Hidden)'),
-            () => this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 0 }),
+            () => {
+                this.clearActionButtons();
+                this.selectedHandCardId = null;
+                this.bga.actions.performAction('actMuster', { card_id: card.card_id, face_up: 0 });
+            },
             { color: 'secondary' }
         );
 
@@ -736,7 +754,9 @@ export class Game {
     }
 
     setupNotifications() {
-        this.bga.notifications.setupPromiseNotifications();
+        this.bga.notifications.setupPromiseNotifications({
+            handlers: [this],
+        });
     }
 
     _getNotifArgs(notif) {
@@ -767,10 +787,8 @@ export class Game {
         if (isMine) {
             const handContainer = document.getElementById('los-hand-cards');
             if (handContainer && card) {
-                // Remove any duplicate (e.g. optimistic insert, or the follow-up private reveal) before appending
-                const existing = document.getElementById(`card-${card.card_id}`);
+                const existing = handContainer.querySelector(`[data-card-id="${card.card_id}"]`);
                 if (existing) existing.remove();
-                // Remove empty-hand placeholder if present
                 const emptyMsg = handContainer.querySelector('.los-empty-msg');
                 if (emptyMsg) emptyMsg.remove();
                 const newCardEl = this.createCardElement(card, 'hand');
@@ -790,16 +808,13 @@ export class Game {
 
     async notif_cardMustered(notif) {
         const args = this._getNotifArgs(notif);
-        const { player_id, card_id, clan, strength, is_face_up, reveal_to_owner } = args;
-        // reveal_to_owner: private follow-up notif that tells the owner the true identity
-        // of their own face-down card (the public broadcast never carries clan/strength).
-        const showRealFace = is_face_up || reveal_to_owner;
-        // Remove from hand if it was currently in this client's hand view
-        const handCardEl = document.querySelector(`#los-hand-cards #card-${card_id}`) || document.getElementById(`card-${card_id}`);
-        const isInHand = Boolean(handCardEl && handCardEl.closest('#los-hand-cards'));
-        const isMine = this.isCurrentPlayer(player_id) || isInHand;
-        const musteredFromRect = (isMine && handCardEl) ? handCardEl.getBoundingClientRect() : null;
-        if (handCardEl && (isMine || isInHand)) {
+        const { player_id, card_id, clan, strength, is_face_up } = args;
+
+        // Locate card in hand if it was played from this client view
+        const handCardEl = document.querySelector(`#los-hand-cards [data-card-id="${card_id}"]`);
+        const musteredFromRect = handCardEl ? handCardEl.getBoundingClientRect() : null;
+
+        if (handCardEl) {
             handCardEl.remove();
             const countEl = document.getElementById('los-hand-count');
             const handContainer = document.getElementById('los-hand-cards');
@@ -807,35 +822,55 @@ export class Game {
                 countEl.textContent = `(${handContainer.children.length} / 10 cards)`;
             }
         }
+
         // Add to player's army
         const armyRow = document.getElementById(`army-cards-${player_id}`);
         if (armyRow) {
             const emptyMsg = armyRow.querySelector('.los-empty-army');
             if (emptyMsg) emptyMsg.remove();
 
-            // Remove duplicate if already there
             const existingInArmy = armyRow.querySelector(`[data-card-id="${card_id}"]`);
             if (existingInArmy) existingInArmy.remove();
 
             const cardData = {
                 card_id,
-                clan: showRealFace ? clan : 'hidden',
-                strength: showRealFace ? strength : 0,
-                is_face_up,
+                clan: clan || 'hidden',
+                strength: strength || 0,
+                is_face_up: is_face_up ? 1 : 0,
             };
             const newCardEl = this.createCardElement(cardData, 'army', player_id);
             armyRow.appendChild(newCardEl);
+
             if (musteredFromRect) {
                 this.flyCardFromRect(newCardEl, musteredFromRect);
             } else {
                 this.popInCard(newCardEl);
             }
         }
+
         const armyStrengthEl = document.getElementById(`army-strength-${player_id}`);
         if (armyStrengthEl && armyRow) {
             armyStrengthEl.textContent = `Army: ${armyRow.children.length} cards`;
         }
         this.updateLowestFaceUp();
+    }
+
+    async notif_cardFaceRevealedToOwner(notif) {
+        const args = this._getNotifArgs(notif);
+        const { player_id, card_id, clan, strength } = args;
+        const armyRow = document.getElementById(`army-cards-${player_id}`);
+        if (!armyRow) return;
+        const armyCardEl = armyRow.querySelector(`[data-card-id="${card_id}"]`);
+        if (armyCardEl) {
+            const cardData = {
+                card_id,
+                clan,
+                strength,
+                is_face_up: 0,
+            };
+            const replacement = this.createCardElement(cardData, 'army', player_id);
+            armyCardEl.replaceWith(replacement);
+        }
     }
 
     async notif_powerActivated(notif) {
@@ -899,7 +934,7 @@ export class Game {
         const args = this._getNotifArgs(notif);
         const { player_id, card_id, new_score } = args;
         // Remove from supporter row
-        const cardEl = document.getElementById(`card-${card_id}`);
+        const cardEl = document.querySelector(`#los-supporter-row [data-card-id="${card_id}"]`);
         if (cardEl) {
             this.popInCard(cardEl);
             setTimeout(() => cardEl.remove(), 250);
@@ -947,7 +982,7 @@ export class Game {
         const args = this._getNotifArgs(notif);
         const cardId = args.target_card_id || args.card_id;
         const victimId = args.victim_id;
-        const cardEl = document.getElementById(`card-${cardId}`);
+        const cardEl = document.querySelector(`#army-cards-${victimId} [data-card-id="${cardId}"]`) || document.querySelector(`#los-armies-container [data-card-id="${cardId}"]`);
         if (cardEl) cardEl.remove();
         const armyRow = document.getElementById(`army-cards-${victimId}`);
         const armyStrengthEl = document.getElementById(`army-strength-${victimId}`);
@@ -960,12 +995,12 @@ export class Game {
     async notif_powerFergussonUsed(notif) {
         const args = this._getNotifArgs(notif);
         const { player_id, target_player_id, fergusson_card_id, target_card_id, fergusson_card, target_card } = args;
-        const ownEl = document.getElementById(`card-${fergusson_card_id}`);
-        const targetEl = document.getElementById(`card-${target_card_id}`);
         const ownArmyRow = document.getElementById(`army-cards-${player_id}`);
         const targetArmyRow = document.getElementById(`army-cards-${target_player_id}`);
 
         if (ownArmyRow && targetArmyRow) {
+            const ownEl = ownArmyRow.querySelector(`[data-card-id="${fergusson_card_id}"]`);
+            const targetEl = targetArmyRow.querySelector(`[data-card-id="${target_card_id}"]`);
             if (ownEl) ownEl.remove();
             if (targetEl) targetEl.remove();
 
@@ -987,12 +1022,12 @@ export class Game {
     async notif_powerCockburnUsed(notif) {
         const args = this._getNotifArgs(notif);
         const { player_id, cockburn_card_id, supporter_card_id, cockburn_card, supporter_card } = args;
-        const armyCardEl = document.getElementById(`card-${cockburn_card_id}`);
-        const supporterCardEl = document.getElementById(`card-${supporter_card_id}`);
         const armyRow = document.getElementById(`army-cards-${player_id}`);
         const supporterRow = document.getElementById('los-supporter-row');
 
         if (armyRow && supporterRow) {
+            const armyCardEl = armyRow.querySelector(`[data-card-id="${cockburn_card_id}"]`);
+            const supporterCardEl = supporterRow.querySelector(`[data-card-id="${supporter_card_id}"]`);
             if (armyCardEl) armyCardEl.remove();
             if (supporterCardEl) supporterCardEl.remove();
 
@@ -1012,7 +1047,7 @@ export class Game {
     async notif_powerScottUsed(notif) {
         const args = this._getNotifArgs(notif);
         const { scott_card_id, copied_clan_name } = args;
-        const cardEl = document.getElementById(`card-${scott_card_id}`);
+        const cardEl = document.querySelector(`#los-armies-container [data-card-id="${scott_card_id}"]`);
         if (cardEl) {
             let badge = cardEl.querySelector('.los-copied-badge');
             if (!badge) {
@@ -1036,7 +1071,7 @@ export class Game {
         const args = this._getNotifArgs(notif);
         const { card, player_id } = args;
         if (card && this.isCurrentPlayer(player_id)) {
-            const cardEl = document.getElementById(`card-${card.card_id}`);
+            const cardEl = document.querySelector(`#army-cards-${player_id} [data-card-id="${card.card_id}"]`);
             if (cardEl && cardEl.parentNode) {
                 const newEl = this.createCardElement(card, 'army', player_id);
                 cardEl.parentNode.replaceChild(newEl, cardEl);

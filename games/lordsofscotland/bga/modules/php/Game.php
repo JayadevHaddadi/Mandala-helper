@@ -168,19 +168,19 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $result['current_player_id'] = (int) $currentPlayerId;
-        $scores = self::getCollectionFromDb("SELECT `player_id`, `player_score`, `player_no` FROM `player`");
+        $scores = self::getCollectionFromDb("SELECT `player_id`, `player_score` FROM `player`", true);
         $handCounts = self::getCollectionFromDb(
             "SELECT `location_arg` AS `player_id`, COUNT(*) AS `count` FROM `card` WHERE `location` = 'hand' GROUP BY `location_arg`",
             true
         );
-        foreach ($result['players'] as $pId => &$pData) {
+        foreach ($result['players'] as $pId => $pData) {
             $pIdInt = (int) $pId;
-            $pData['player_id'] = $pIdInt;
-            $pData['id'] = $pIdInt;
-            $pData['player_score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
-            $pData['score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
-            $pData['player_no'] = (int) ($scores[$pIdInt]['player_no'] ?? 0);
-            $pData['hand_count'] = (int) ($handCounts[$pId] ?? 0);
+            $result['players'][$pId]['player_id'] = $pIdInt;
+            $result['players'][$pId]['id'] = $pIdInt;
+            $result['players'][$pId]['player_score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
+            $result['players'][$pId]['score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
+            $result['players'][$pId]['player_no'] = (int) ($pData['player_no'] ?? 0);
+            $result['players'][$pId]['hand_count'] = (int) ($handCounts[$pId] ?? 0);
         }
 
         // Armies for all players (face-down cards masked for everyone)
@@ -232,19 +232,17 @@ class Game extends \Bga\GameFramework\Table
         $default_colors = $gameinfos['player_colors'];
 
         $query_values = [];
-        $playerNo = 1;
         foreach ($players as $player_id => $player) {
-            $query_values[] = vsprintf("(%s, '%s', '%s', %d)", [
+            $query_values[] = vsprintf("(%s, '%s', '%s')", [
                 $player_id,
                 array_shift($default_colors),
                 addslashes($player["player_name"]),
-                $playerNo++,
             ]);
         }
 
         static::DbQuery(
             sprintf(
-                "INSERT INTO `player` (`player_id`, `player_color`, `player_name`, `player_no`) VALUES %s",
+                "INSERT INTO `player` (`player_id`, `player_color`, `player_name`) VALUES %s",
                 implode(",", $query_values)
             )
         );

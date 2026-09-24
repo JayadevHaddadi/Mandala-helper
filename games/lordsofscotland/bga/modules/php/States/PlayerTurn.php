@@ -155,15 +155,16 @@ class PlayerTurn extends GameState
                 'player_id' => $activePlayerId,
                 'player_name' => $playerName,
                 'card_id' => $card_id,
+                'clan' => 'hidden',
+                'strength' => 0,
                 'is_face_up' => 0,
             ]);
-            $this->notify->player($activePlayerId, "cardMustered", '', [
+            $this->notify->player($activePlayerId, "cardFaceRevealedToOwner", '', [
                 'player_id' => $activePlayerId,
                 'card_id' => $card_id,
                 'clan' => $clan,
                 'strength' => $strength,
                 'is_face_up' => 0,
-                'reveal_to_owner' => true,
             ]);
             return NextPlayer::class;
         }
