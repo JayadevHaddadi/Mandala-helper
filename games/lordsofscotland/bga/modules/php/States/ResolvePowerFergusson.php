@@ -45,8 +45,9 @@ class ResolvePowerFergusson extends GameState
     }
 
     #[PossibleAction]
-    public function actChooseSwap(int $target_card_id, int $activePlayerId): string
+    public function actChooseSwap(int $target_card_id): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
 
         $fergussonCard = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $pendingCardId AND `location` = 'army'");
@@ -99,7 +100,7 @@ class ResolvePowerFergusson extends GameState
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
         $target = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'army' AND `card_id` != $pendingCardId AND `location_arg` != $playerId LIMIT 1");
         if ($target) {
-            return $this->actChooseSwap((int)$target['card_id'], $playerId);
+            return $this->actChooseSwap((int)$target['card_id']);
         }
         return NextPlayer::class;
     }

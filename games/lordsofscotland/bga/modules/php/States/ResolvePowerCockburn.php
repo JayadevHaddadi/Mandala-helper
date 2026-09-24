@@ -33,8 +33,9 @@ class ResolvePowerCockburn extends GameState
     }
 
     #[PossibleAction]
-    public function actChooseSupporterSwap(int $supporter_card_id, int $activePlayerId): string
+    public function actChooseSupporterSwap(int $supporter_card_id): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
 
         $cockburnCard = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $pendingCardId AND `location` = 'army'");
@@ -76,7 +77,7 @@ class ResolvePowerCockburn extends GameState
     {
         $supporter = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'supporter' LIMIT 1");
         if ($supporter) {
-            return $this->actChooseSupporterSwap((int)$supporter['card_id'], $playerId);
+            return $this->actChooseSupporterSwap((int)$supporter['card_id']);
         }
         return NextPlayer::class;
     }

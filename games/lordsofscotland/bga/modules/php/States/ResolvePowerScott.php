@@ -41,8 +41,9 @@ class ResolvePowerScott extends GameState
     }
 
     #[PossibleAction]
-    public function actChooseCopy(int $target_card_id, int $activePlayerId): string
+    public function actChooseCopy(int $target_card_id): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
 
         $targetCard = Game::getObjectFromDb(
@@ -117,7 +118,7 @@ class ResolvePowerScott extends GameState
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
         $target = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'army' AND `is_face_up` = 1 AND `card_id` != $pendingCardId AND `clan` != 'scott' LIMIT 1");
         if ($target) {
-            return $this->actChooseCopy((int)$target['card_id'], $playerId);
+            return $this->actChooseCopy((int)$target['card_id']);
         }
         return NextPlayer::class;
     }

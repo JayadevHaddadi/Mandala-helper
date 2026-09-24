@@ -54,8 +54,9 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actRecruit(int $card_id, int $activePlayerId): string
+    public function actRecruit(int $card_id): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
         if ($extraMuster) {
             throw new UserException(clienttranslate('You used Clan Makgill to muster another clan and must muster now'));
@@ -113,8 +114,9 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actMuster(int $card_id, int $face_up, int $activePlayerId): string
+    public function actMuster(int $card_id, int $face_up): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $face_up = ($face_up === 1);
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $card_id AND `location` = 'hand' AND `location_arg` = $activePlayerId");
         if (!$card) {
@@ -266,8 +268,9 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actPass(int $activePlayerId): string
+    public function actPass(): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
         $handCount = (int) Game::getUniqueValueFromDb(
             "SELECT COUNT(*) FROM `card` WHERE `location` = 'hand' AND `location_arg` = $activePlayerId"
@@ -290,11 +293,11 @@ class PlayerTurn extends GameState
         $this->game->globals->set('extra_muster_active', 0);
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'hand' AND `location_arg` = $playerId LIMIT 1");
         if ($card) {
-            return $this->actMuster((int)$card['card_id'], 0, $playerId);
+            return $this->actMuster((int)$card['card_id'], 0);
         }
         $recruit = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'recruit' LIMIT 1");
         if ($recruit) {
-            return $this->actRecruit((int)$recruit['card_id'], $playerId);
+            return $this->actRecruit((int)$recruit['card_id']);
         }
         return NextPlayer::class;
     }

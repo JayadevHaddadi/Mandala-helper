@@ -293,29 +293,32 @@ export class Game {
         const viPlayerId = parseInt(this.gamedatas?.victor_initiative, 10);
         const viPlayer = this.gamedatas?.players?.[viPlayerId] || this.gamedatas?.players?.[String(viPlayerId)];
         const el = document.getElementById('los-vi-val');
-        if (el && viPlayer) {
-            const pName = viPlayer.player_name || viPlayer.name || '';
-            const pColor = viPlayer.player_color || viPlayer.color || 'ffffff';
-            el.innerHTML = `<span style="color: #${pColor}; font-weight: bold;">👑 ${pName}</span>`;
+        if (el) {
+            if (viPlayer) {
+                const pName = viPlayer.player_name || viPlayer.name || '';
+                const pColor = viPlayer.player_color || viPlayer.color || 'ffffff';
+                el.innerHTML = `<span style="color: #${pColor}; font-weight: bold;">👑 ${pName}</span>`;
+            } else {
+                el.innerHTML = '';
+            }
         }
 
-        // Synchronize crown badge on player army headers
-        document.querySelectorAll('.los-army-box').forEach(box => {
-            const boxPlayerId = parseInt(box.dataset.playerId, 10);
-            const titleEl = box.querySelector('.los-army-player-title');
-            if (!titleEl) return;
+        // Synchronize crown badge: clear all badges across all army headers first
+        document.querySelectorAll('.los-crown-badge').forEach(b => b.remove());
 
-            const existingBadges = titleEl.querySelectorAll('.los-crown-badge');
-            existingBadges.forEach(b => b.remove());
-
-            if (viPlayerId && boxPlayerId === viPlayerId) {
-                const badge = document.createElement('span');
-                badge.className = 'los-crown-badge';
-                badge.title = _('Victor’s Initiative');
-                badge.textContent = '👑 Initiative';
-                titleEl.appendChild(badge);
+        if (viPlayerId) {
+            const viBox = document.getElementById(`player-army-box-${viPlayerId}`);
+            if (viBox) {
+                const titleEl = viBox.querySelector('.los-army-player-title');
+                if (titleEl) {
+                    const badge = document.createElement('span');
+                    badge.className = 'los-crown-badge';
+                    badge.title = _('Victor’s Initiative');
+                    badge.textContent = '👑 Initiative';
+                    titleEl.appendChild(badge);
+                }
             }
-        });
+        }
     }
 
     renderRecruitRow(recruitCards) {

@@ -37,8 +37,9 @@ class DraftSupporter extends GameState
     }
 
     #[PossibleAction]
-    public function actDraftSupporter(int $card_id, int $activePlayerId): string
+    public function actDraftSupporter(int $card_id): string
     {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
         $supporter = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $card_id AND `location` = 'supporter'");
         if (!$supporter) {
             throw new UserException(clienttranslate('This card is not available in the supporter row'));
@@ -86,7 +87,7 @@ class DraftSupporter extends GameState
     {
         $firstSupporter = Game::getObjectFromDb("SELECT * FROM `card` WHERE `location` = 'supporter' ORDER BY `strength` DESC LIMIT 1");
         if ($firstSupporter) {
-            return $this->actDraftSupporter((int)$firstSupporter['card_id'], $playerId);
+            return $this->actDraftSupporter((int)$firstSupporter['card_id']);
         }
         return SkirmishResolution::class;
     }
