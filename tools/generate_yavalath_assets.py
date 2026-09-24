@@ -146,20 +146,95 @@ def generate_banner():
 
     banner_path = os.path.join(OUTPUT_DIR, "banner_1920x556.jpg")
     img.save(banner_path, "JPEG", quality=92)
-    print(f"Generated {banner_path}")
+    img.save(os.path.join(OUTPUT_DIR, "banner.jpg"), "JPEG", quality=92)
+    print(f"Generated {banner_path} and banner.jpg")
 
 def copy_publisher():
-    # Copy nestorgames publisher logo from omega
     src = os.path.join(os.path.dirname(__file__), "..", "games", "omega", "bga", "metadata_assets", "publisher_280x280.png")
     dst = os.path.join(OUTPUT_DIR, "publisher_280x280.png")
+    dst2 = os.path.join(OUTPUT_DIR, "publisher.png")
     if os.path.exists(src):
-        with open(src, "rb") as f_in, open(dst, "wb") as f_out:
-            f_out.write(f_in.read())
-        print(f"Copied publisher logo to {dst}")
+        with open(src, "rb") as f_in:
+            data = f_in.read()
+        with open(dst, "wb") as f_out:
+            f_out.write(data)
+        with open(dst2, "wb") as f_out:
+            f_out.write(data)
+        print(f"Copied publisher logo to {dst} and {dst2}")
+
+def generate_display():
+    # 900x600 screenshot / showcase for BGA carousel
+    w, h = 900, 600
+    img = Image.new("RGB", (w, h), (242, 235, 224))
+    draw = ImageDraw.Draw(img)
+
+    # Outer mat / wooden rim
+    draw.rectangle([20, 20, w - 20, h - 20], fill=(237, 230, 214), outline=(194, 181, 159), width=2)
+
+    cx, cy = w / 2, h / 2
+    hex_size = 28
+    radius = 4
+
+    # Hex cells
+    for q in range(-radius, radius + 1):
+        for r in range(-radius, radius + 1):
+            if -radius <= q + r <= radius:
+                x = cx + hex_size * (math.sqrt(3) * q + (math.sqrt(3) / 2) * r)
+                y = cy + hex_size * (1.5 * r)
+                draw_hexagon(draw, (x, y), hex_size - 1, fill=(250, 246, 237), outline=(210, 196, 174), width=1)
+                draw.ellipse((x - 2, y - 2, x + 2, y + 2), fill=(180, 168, 150))
+
+    # Sample stones on board to show exciting game state
+    stones = [
+        (0, 0, 'white'), (1, 0, 'white'), (2, 0, 'white'), (3, 0, 'white'), # 4 in a row win!
+        (0, 1, 'black'), (-1, 1, 'black'), (0, -1, 'black'), (-1, 0, 'black'),
+        (1, -1, 'black'), (-2, 2, 'white'), (0, 2, 'white'), (-1, 2, 'white')
+    ]
+
+    for q, r, color in stones:
+        x = cx + hex_size * (math.sqrt(3) * q + (math.sqrt(3) / 2) * r)
+        y = cy + hex_size * (1.5 * r)
+        sr = int(hex_size * 0.72)
+        # Drop shadow
+        draw.ellipse((x - sr + 2, y - sr + 4, x + sr + 2, y + sr + 4), fill=(0, 0, 0, 70))
+        if color == 'white':
+            draw.ellipse((x - sr, y - sr, x + sr, y + sr), fill=(248, 246, 240), outline=(170, 160, 146), width=1)
+            # Specular shine
+            draw.ellipse((x - sr*0.5, y - sr*0.5, x - sr*0.1, y - sr*0.2), fill=(255, 255, 255))
+        else:
+            draw.ellipse((x - sr, y - sr, x + sr, y + sr), fill=(24, 24, 24), outline=(10, 10, 10), width=1)
+            # Specular shine
+            draw.ellipse((x - sr*0.5, y - sr*0.5, x - sr*0.1, y - sr*0.2), fill=(100, 100, 100))
+
+    # Highlight winning line
+    for q in range(4):
+        x = cx + hex_size * (math.sqrt(3) * q + (math.sqrt(3) / 2) * 0)
+        y = cy
+        draw.ellipse((x - hex_size * 0.82, y - hex_size * 0.82, x + hex_size * 0.82, y + hex_size * 0.82), outline=(46, 125, 50), width=3)
+
+    try:
+        font = ImageFont.truetype("arial.ttf", 22)
+    except:
+        font = ImageFont.load_default()
+
+    draw.text((40, 35), "YAVALATH — Official nestorgames Edition", font=font, fill=(50, 50, 50))
+    display_path = os.path.join(OUTPUT_DIR, "display.jpg")
+    img.save(display_path, "JPEG", quality=90)
+    print(f"Generated {display_path}")
 
 if __name__ == "__main__":
     generate_box()
     generate_icon()
     generate_banner()
     copy_publisher()
+    generate_display()
+    # Also save box.png and icon.png canonical aliases
+    box_p = os.path.join(OUTPUT_DIR, "box_280x280.png")
+    if os.path.exists(box_p):
+        with open(box_p, "rb") as f_in, open(os.path.join(OUTPUT_DIR, "box.png"), "wb") as f_out:
+            f_out.write(f_in.read())
+    icon_p = os.path.join(OUTPUT_DIR, "icon_50x50.png")
+    if os.path.exists(icon_p):
+        with open(icon_p, "rb") as f_in, open(os.path.join(OUTPUT_DIR, "icon.png"), "wb") as f_out:
+            f_out.write(f_in.read())
     print("All Yavalath metadata assets generated successfully!")

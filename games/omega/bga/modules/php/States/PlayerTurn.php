@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Bga\Games\omegatest\States;
+namespace Bga\Games\omega\States;
 
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\GameFramework\UserException;
-use Bga\Games\omegatest\Game;
+use Bga\Games\omega\Game;
 
 class PlayerTurn extends GameState
 {
@@ -115,7 +115,7 @@ class PlayerTurn extends GameState
         foreach ($placedCoords as $pt) {
             $q = (int) $pt['q'];
             $r = (int) $pt['r'];
-            static::DbQuery("UPDATE `board` SET `color` = NULL, `player_id` = NULL WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
+            $this->game->clearCell($q, $r);
         }
 
         $this->globals->set('placed_this_turn', []);

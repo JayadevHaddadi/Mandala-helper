@@ -25,7 +25,7 @@ Every change should be committed and pushed to `main`. The GitHub Actions deploy
 
 | Game | Local Directory | Remote BGA Studio Slot | Fast-Lane Sync Command |
 | :--- | :--- | :--- | :--- |
-| **Omega** | `games/omega/bga/` | `omegatest` | `python tools/sync.py omegatest` |
+| **Omega** | `games/omega/bga/` | `omega` (prod) / `omegatest` | `python tools/sync.py omega` |
 | **Yavalath** | `games/yavalath/bga/` | `yavalath` | `python tools/sync.py yavalath` |
 | **Lords of Scotland** | `games/lordsofscotland/bga/` | `lordsofscotlandtest` | `python tools/sync.py lordsofscotlandtest` |
 | **Push Fight** | `games/pushfight/bga/` | `pushfighttest` / `pushfight` | `python tools/sync.py pushfighttest` |

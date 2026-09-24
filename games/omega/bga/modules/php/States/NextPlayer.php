@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Bga\Games\omegatest\States;
+namespace Bga\Games\omega\States;
 
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
-use Bga\Games\omegatest\Game;
+use Bga\Games\omega\Game;
 
 class NextPlayer extends GameState
 {

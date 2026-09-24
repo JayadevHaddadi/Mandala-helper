@@ -249,6 +249,8 @@ export class Game {
     }
 
     addActionButton(id, text, callback, color = 'primary') {
+        const existing = document.getElementById(id);
+        if (existing) return;
         if (!this.bga?.statusBar?.addActionButton) return;
         try {
             this.bga.statusBar.addActionButton(text, callback, { color: color, id: id });
@@ -586,6 +588,16 @@ export class Game {
         if (typeof this.bga?.statusBar?.clearActionButtons === 'function') {
             this.bga.statusBar.clearActionButtons();
         }
+        if (typeof this.bga?.statusBar?.removeActionButtons === 'function') {
+            this.bga.statusBar.removeActionButtons();
+        }
+        if (typeof gameui !== 'undefined' && typeof gameui.removeActionButtons === 'function') {
+            gameui.removeActionButtons();
+        }
+        ['btnSwapColors', 'btnUndoTurn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.remove();
+        });
     }
 
     _getNotifArgs(notif) {

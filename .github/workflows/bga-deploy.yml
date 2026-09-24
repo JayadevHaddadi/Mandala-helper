@@ -15,6 +15,7 @@ on:
         type: choice
         options:
           - all
+          - omega
           - omegatest
           - yavalath
           - lordsofscotlandtest
@@ -55,7 +56,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             CHOICE="${{ github.event.inputs.target }}"
             if [ "$CHOICE" = "all" ]; then
-              python tools/sync.py omegatest
+              python tools/sync.py omega
               python tools/sync.py yavalath
               python tools/sync.py lordsofscotlandtest
               python tools/sync.py pushfight
@@ -71,8 +72,8 @@ jobs:
 
             DEPLOYED=0
             if echo "$CHANGED" | grep -q "games/omega"; then
-              echo "Deploying Omega..."
-              python tools/sync.py omegatest
+              echo "Deploying Omega to official slot (omega)..."
+              python tools/sync.py omega
               DEPLOYED=1
             fi
 

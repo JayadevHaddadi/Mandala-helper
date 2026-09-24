@@ -9,11 +9,11 @@
  */
 declare(strict_types=1);
 
-namespace Bga\Games\omegatest;
+namespace Bga\Games\omega;
 
-use Bga\Games\omegatest\States\PlayerTurn;
-use Bga\Games\omegatest\States\NextPlayer;
-use Bga\Games\omegatest\States\EndScore;
+use Bga\Games\omega\States\PlayerTurn;
+use Bga\Games\omega\States\NextPlayer;
+use Bga\Games\omega\States\EndScore;
 use Bga\GameFramework\UserException;
 
 class Game extends \Bga\GameFramework\Table
@@ -215,6 +215,11 @@ class Game extends \Bga\GameFramework\Table
         }
 
         static::DbQuery("UPDATE `board` SET `color` = '{$color}', `player_id` = {$playerId} WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
+    }
+
+    public function clearCell(int $q, int $r): void
+    {
+        static::DbQuery("UPDATE `board` SET `color` = NULL, `player_id` = NULL WHERE `coord_q` = {$q} AND `coord_r` = {$r}");
     }
 
     /**
