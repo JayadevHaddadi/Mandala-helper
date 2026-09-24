@@ -238,6 +238,16 @@ export class Game {
         return null;
     }
 
+    getCurrentPlayerId() {
+        if (this.bga?.players && typeof this.bga.players.getCurrentPlayerId === 'function') {
+            return this.bga.players.getCurrentPlayerId();
+        }
+        if (typeof gameui !== 'undefined' && gameui.player_id) {
+            return gameui.player_id;
+        }
+        return null;
+    }
+
     addActionButton(id, text, callback, color = 'primary') {
         if (!this.bga?.statusBar?.addActionButton) return;
         try {
@@ -253,6 +263,8 @@ export class Game {
 
     setup(gamedatas) {
         this.HEX_RADIUS = gamedatas.hex_radius || 4;
+        const hexSizeByRadius = { 2: 52, 3: 40, 4: 30, 5: 24, 6: 20 };
+        this.HEX_SIZE = hexSizeByRadius[this.HEX_RADIUS] || 30;
         this.boardData = gamedatas.board || {};
         this.playerColors = gamedatas.player_colors || {};
         this.activeColors = gamedatas.active_colors || ['white', 'black'];
@@ -424,6 +436,41 @@ export class Game {
         const colorToPlace = remaining[0];
         sounds.playPlace();
 
+        // 1. Optimistic UI update: render stone and shine immediately (0ms visual feedback)
+        this.boardData[key] = { q, r, color: colorToPlace };
+        const cell = document.querySelector(`.omega_cell[data-q="${q}"][data-r="${r}"]`);
+        if (cell) {
+            const stone = cell.querySelector('.omega_stone');
+            const shine = cell.querySelector('.omega_stone_shine');
+            const ghost = cell.querySelector('.omega_ghost_stone');
+            if (ghost) ghost.style.display = 'none';
+            if (stone) {
+                stone.setAttribute('class', `omega_stone omega_stone_${colorToPlace}`);
+                stone.style.display = 'block';
+            }
+            if (shine) {
+                shine.style.display = 'block';
+            }
+            cell.classList.remove('omega_valid_target');
+        }
+
+        // 2. Advance local turn state immediately so next color is ready to click without waiting
+        const placed = [...(this.currentArgs?.placed_this_turn || []), colorToPlace];
+        const nextRemaining = this.getRemainingColors(placed);
+        if (this.currentArgs) {
+            this.currentArgs.placed_this_turn = placed;
+            this.currentArgs.remaining_colors = nextRemaining;
+            this.playerTurn.updateControls(this.currentArgs, true);
+        }
+
+        if (nextRemaining.length > 0) {
+            this.updateBoardInteractions(true);
+        } else {
+            // All stones placed for this turn; await server confirmation and state switch
+            this.updateBoardInteractions(false);
+        }
+
+        // 3. Dispatch to server
         this.bga.actions.performAction('actPlaceStone', {
             q: q,
             r: r,
@@ -594,7 +641,9 @@ export class Game {
             }
         }
 
-        sounds.playPlace();
+        if (String(args.player_id) !== String(this.getCurrentPlayerId())) {
+            sounds.playPlace();
+        }
         this.updateScoresDisplay(scores);
     }
 

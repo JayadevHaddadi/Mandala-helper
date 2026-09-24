@@ -33,7 +33,8 @@ class Game extends \Bga\GameFramework\Table
     public function getGameProgression(): int
     {
         $placed = (int) $this->getUniqueValueFromDb("SELECT COUNT(*) FROM `board` WHERE `color` IS NOT NULL");
-        $total = 61;
+        $total = (int) $this->getUniqueValueFromDb("SELECT COUNT(*) FROM `board`");
+        if ($total <= 0) return 0;
         return (int) min(100, round(($placed / $total) * 100));
     }
 
@@ -94,8 +95,13 @@ class Game extends \Bga\GameFramework\Table
 
         $this->reloadPlayersBasicInfos();
 
-        // Generate axial hex coordinates for radius 4 (61 cells)
-        $radius = self::HEX_RADIUS;
+        $radiusOption = isset($options[101]) ? (int) $options[101] : (int) $this->getGameStateValue('101', 4);
+        if (!in_array($radiusOption, [2, 3, 4, 5, 6], true)) {
+            $radiusOption = self::HEX_RADIUS;
+        }
+
+        // Generate axial hex coordinates for chosen radius
+        $radius = $radiusOption;
         $values = [];
         for ($q = -$radius; $q <= $radius; $q++) {
             for ($r = -$radius; $r <= $radius; $r++) {
@@ -112,6 +118,7 @@ class Game extends \Bga\GameFramework\Table
         $numPlayers = count($players);
 
         // Global variables initialization
+        $this->globals->set('hex_radius', $radius);
         $this->globals->set('turn_count', 1);
         $this->globals->set('placed_this_turn', []); // list of colors placed so far this turn
         $this->globals->set('placed_coords_this_turn', []); // list of coordinates placed this turn for undo
@@ -145,7 +152,7 @@ class Game extends \Bga\GameFramework\Table
         $result['pie_rule_available'] = (bool) $this->globals->get('pie_rule_available', false);
         $result['player_colors'] = $this->globals->get('player_colors', []);
         $result['active_colors'] = $this->getActiveColorsInGame();
-        $result['hex_radius'] = self::HEX_RADIUS;
+        $result['hex_radius'] = (int) $this->globals->get('hex_radius', self::HEX_RADIUS);
         $result['turn_count'] = (int) $this->globals->get('turn_count', 1);
         return $result;
     }

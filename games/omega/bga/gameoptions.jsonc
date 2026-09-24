@@ -12,5 +12,31 @@
             }
         },
         "default": 1
+    },
+    "101": {
+        "name": "Board Size",
+        "values": {
+            "2": {
+                "name": "Mini (Side 3, 19 hexes)",
+                "description": "Ultra-fast game or quick testing (approx. 9 turns)."
+            },
+            "3": {
+                "name": "Short (Side 4, 37 hexes)",
+                "description": "Quick beginner game (approx. 18 turns)."
+            },
+            "4": {
+                "name": "Standard (Side 5, 61 hexes)",
+                "description": "Official standard tournament board (approx. 30 turns)."
+            },
+            "5": {
+                "name": "Large (Side 6, 91 hexes)",
+                "description": "Pro game with larger board (approx. 45 turns)."
+            },
+            "6": {
+                "name": "Expert (Side 7, 127 hexes)",
+                "description": "Deep strategy and huge group multiplication."
+            }
+        },
+        "default": 4
     }
 }
