@@ -94,6 +94,11 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
             ]);
 
         // 3. Automated Supporter Drafting: award highest supporter(s) in rank order
+        $supportersClaimed = [];
+        foreach ($rankings as $candidate) {
+            $supportersClaimed[(int)$candidate['player_id']] = [];
+        }
+
         foreach ($rankings as $candidate) {
             if ($candidate['card_count'] <= 0) {
                 continue;
@@ -113,6 +118,7 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                 $strength = (int) $supporter['strength'];
                 $clan = $supporter['clan'];
                 $clanName = Game::CLANS[$clan]['name'];
+                $isBonus = ($candidate['has_cochrane'] && $d === 1);
 
                 // Move to score pile
                 Game::DbQuery("UPDATE `card` SET `location` = 'score', `location_arg` = $pId, `is_face_up` = 1 WHERE `card_id` = $cardId");
@@ -120,7 +126,15 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
                 $newScore = (int) $this->game->playerScore->get($pId);
                 $this->game->playerStats->inc('supporters_claimed', 1, $pId);
 
-                $bonusText = ($candidate['has_cochrane'] && $d === 1) ? clienttranslate(' (Clan Cochrane bonus)') : '';
+                $supportersClaimed[$pId][] = [
+                    'card_id' => $cardId,
+                    'clan' => $clan,
+                    'clan_name' => $clanName,
+                    'strength' => $strength,
+                    'bonus' => $isBonus,
+                ];
+
+                $bonusText = $isBonus ? clienttranslate(' (Clan Cochrane bonus)') : '';
                 $this->notify->all("supporterDrafted", clienttranslate('${player_name} claims ${clan_name} (${strength} pts) from Supporter row${bonus_text} (Total Score: ${new_score})'), [
                     'player_id' => $pId,
                     'player_name' => $pName,
@@ -143,6 +157,53 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
             $this->game->playerStats->inc('skirmishes_won', 1, $winnerId);
         }
         $this->game->tableStats->inc('skirmishes_number', 1);
+
+        // Build summary data and log detailed results to BGA game log
+        $skirmishNum = (int) $this->game->globals->get('current_skirmish', 1);
+        $summaryData = [];
+        foreach ($rankings as $r) {
+            $pId = (int) $r['player_id'];
+            $pClaimed = $supportersClaimed[$pId] ?? [];
+            $newScore = (int) $this->game->playerScore->get($pId);
+            $rawTotal = $r['doubled'] ? (int)($r['total'] / 2) : $r['total'];
+
+            $summaryData[] = [
+                'rank' => $r['rank'],
+                'player_id' => $pId,
+                'name' => $r['name'],
+                'total' => $r['total'],
+                'raw_total' => $rawTotal,
+                'doubled' => $r['doubled'],
+                'supporters_claimed' => $pClaimed,
+                'new_score' => $newScore,
+            ];
+
+            $doubledText = $r['doubled'] ? clienttranslate(' [🔥 Bloodline Doubled!]') : '';
+            $suppList = [];
+            foreach ($pClaimed as $s) {
+                $bonus = $s['bonus'] ? clienttranslate(' (Cochrane bonus)') : '';
+                $suppList[] = "{$s['clan_name']} ({$s['strength']} pts){$bonus}";
+            }
+            $suppText = empty($suppList) ? clienttranslate('None') : implode(', ', $suppList);
+
+            $this->notify->all("skirmishResultLog", clienttranslate('Skirmish #${skirmish_num} — Rank #${rank}: ${player_name} — Army Strength: <strong>${total}</strong>${doubled_text} | Supporters claimed: ${supporters_text} | Score: <strong>${new_score}</strong> pts'), [
+                'skirmish_num' => $skirmishNum,
+                'rank' => $r['rank'],
+                'player_id' => $pId,
+                'player_name' => $r['name'],
+                'total' => $r['total'],
+                'doubled_text' => $doubledText,
+                'supporters_text' => $suppText,
+                'new_score' => $newScore,
+            ]);
+        }
+
+        $this->notify->all("skirmishSummary", '', [
+            'skirmish_num' => $skirmishNum,
+            'winner_id' => $winnerId,
+            'winner_name' => $winner ? $winner['name'] : '',
+            'summary' => $summaryData,
+        ]);
 
         // Check if any player has reached 40 or more points
         $maxScore = (int) Game::getUniqueValueFromDb("SELECT MAX(`player_score`) FROM `player`");

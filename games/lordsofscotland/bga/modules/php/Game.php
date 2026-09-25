@@ -471,6 +471,7 @@ class Game extends \Bga\GameFramework\Table
             }
         }
 
+        $rawTotal = $sum;
         $doubled = false;
         // Bloodline Doubling Rule: if player played > 1 card and all cards belong to the same bloodline (Bruce acting as wild)
         if (count($cards) > 1) {
@@ -484,6 +485,7 @@ class Game extends \Bga\GameFramework\Table
 
         return [
             'total' => $sum,
+            'raw_total' => $rawTotal,
             'doubled' => $doubled,
             'cards' => $cards,
             'max_card' => $maxCard,

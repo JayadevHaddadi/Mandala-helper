@@ -95,6 +95,35 @@ class ResolvePowerFergusson extends GameState
         return $extraMuster ? PlayerTurn::class : NextPlayer::class;
     }
 
+    #[PossibleAction]
+    public function actUndo(): string
+    {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
+        $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
+
+        $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $pendingCardId AND `location` = 'army' AND `location_arg` = $activePlayerId");
+        if (!$card) {
+            throw new UserException(clienttranslate('No pending muster to undo'));
+        }
+
+        // Return card to player's hand face-down
+        Game::DbQuery("UPDATE `card` SET `location` = 'hand', `location_arg` = $activePlayerId, `is_face_up` = 0, `power_activated` = 0, `round_played` = 0, `copied_clan` = NULL WHERE `card_id` = $pendingCardId");
+
+        $this->game->playerStats->inc('powers_activated', -1, $activePlayerId);
+        $this->game->globals->set('pending_power_card_id', 0);
+
+        $playerName = $this->game->getPlayerNameById($activePlayerId);
+
+        $this->notify->all("musterUndone", clienttranslate('${player_name} undid their muster'), [
+            'player_id' => $activePlayerId,
+            'player_name' => $playerName,
+            'card_id' => $pendingCardId,
+            'card' => $card,
+        ]);
+
+        return PlayerTurn::class;
+    }
+
     public function zombie(int $playerId): string
     {
         $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
