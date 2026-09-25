@@ -47,6 +47,40 @@
     transform: translateY(-1px);
 }
 
+.omega_order_badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #495057;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    cursor: help;
+    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.omega_order_badge:hover {
+    transform: scale(1.18);
+    background: #ff9800;
+    color: #ffffff;
+}
+
+.omega_tiebreak_hint {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #777;
+    cursor: help;
+    padding: 2px 6px;
+    font-style: italic;
+    white-space: nowrap;
+}
+
 .omega_color_pip {
     display: inline-block;
     width: 18px;

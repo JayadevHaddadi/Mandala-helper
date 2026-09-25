@@ -303,6 +303,13 @@ class Game extends \Bga\GameFramework\Table
             ];
         }
 
+        $colorOrder = ['white' => 1, 'black' => 2, 'red' => 3, 'blue' => 4];
+        uasort($scores, function ($a, $b) use ($colorOrder) {
+            $oa = $colorOrder[$a['color'] ?? ''] ?? 99;
+            $ob = $colorOrder[$b['color'] ?? ''] ?? 99;
+            return $oa <=> $ob;
+        });
+
         return $scores;
     }
 

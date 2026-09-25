@@ -27,7 +27,19 @@ class NextPlayer extends GameState
 
         $playerIds = array_keys($this->game->loadPlayersBasicInfos());
         $numPlayers = count($playerIds);
-        $firstPlayerId = (int) $playerIds[0];
+
+        // Find the White player (who always leads the round, even if swapped)
+        $playerColors = $this->globals->get('player_colors', []);
+        $whitePlayerId = null;
+        foreach ($playerColors as $pId => $col) {
+            if ($col === 'white') {
+                $whitePlayerId = (int) $pId;
+                break;
+            }
+        }
+        if ($whitePlayerId === null) {
+            $whitePlayerId = (int) $playerIds[0];
+        }
 
         $colorsPerTurn = count($this->game->getActiveColorsInGame());
         $emptyCount = count($this->game->getEmptyCells());
@@ -35,10 +47,10 @@ class NextPlayer extends GameState
         // Advance to next player
         $nextPlayerId = (int) $this->game->activeNextPlayer();
 
-        // Omega official rule: The game ends just before White's turn (new round)
-        // when it is no longer possible for all players to complete a full round (requires N * N empty spaces).
+        // Omega official rule: The game ends just before White's turn (start of a new round)
+        // when it is no longer possible for all players to complete a full round (requires N * colorsPerTurn empty spaces).
         $minSpacesForFullRound = $numPlayers * $colorsPerTurn;
-        if ($nextPlayerId === $firstPlayerId && $emptyCount < $minSpacesForFullRound) {
+        if ($nextPlayerId === $whitePlayerId && $emptyCount < $minSpacesForFullRound) {
             return EndScore::class;
         }
 

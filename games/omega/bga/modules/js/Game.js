@@ -616,16 +616,37 @@ export class Game {
 
         const activePlayerId = this.getActivePlayerId();
 
+        // Always display in canonical game color order: White -> Black -> Red -> Blue
+        const colorOrder = { 'white': 1, 'black': 2, 'red': 3, 'blue': 4 };
+        const sortedEntries = Object.entries(scores).sort((a, b) => {
+            const oa = colorOrder[a[1]?.color] || 99;
+            const ob = colorOrder[b[1]?.color] || 99;
+            return oa - ob;
+        });
+
+        const totalPlayers = sortedEntries.length;
+
         let html = '';
-        for (const [playerId, data] of Object.entries(scores)) {
+        for (const [playerId, data] of sortedEntries) {
             const pInfo = this.bga?.players?.getPlayer?.(playerId) || {};
             const pName = pInfo.name || `Player ${playerId}`;
             const color = data.color || 'white';
+            const orderNum = colorOrder[color] || 1;
             const groupsStr = data.groups?.length ? data.groups.join(' × ') : '0';
             const isActive = String(playerId) === String(activePlayerId);
 
+            let tieTooltip = '';
+            if (orderNum === 1) {
+                tieTooltip = _('Turn Order #1 (Opening turn — loses tiebreak to later players)');
+            } else if (orderNum === totalPlayers) {
+                tieTooltip = _('Turn Order #${order} (Last turn in round — WINS tiebreak vs all players)').replace('${order}', orderNum);
+            } else {
+                tieTooltip = _('Turn Order #${order} (Wins tiebreak vs earlier turns)').replace('${order}', orderNum);
+            }
+
             html += `
                 <div class="omega_score_item omega_score_${color} ${isActive ? 'omega_score_active' : ''}">
+                    <span class="omega_order_badge" title="${tieTooltip}">#${orderNum}</span>
                     <span class="omega_color_pip omega_pip_${color}"></span>
                     <strong class="omega_player_name">${pName}</strong>:
                     <span class="omega_score_val">${data.score}</span>
@@ -633,6 +654,13 @@ export class Game {
                 </div>
             `;
         }
+
+        html += `
+            <div class="omega_tiebreak_hint" title="${_('Official rule: in case of a tie in score, the last of the tied players in turn order wins.')}">
+                ⚖️ ${_('Tiebreak: later turn (#) wins')}
+            </div>
+        `;
+
         bar.innerHTML = html;
     }
 
