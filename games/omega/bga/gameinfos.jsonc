@@ -14,7 +14,7 @@
     "medium_additional_time": 30,
     "slow_additional_time": 45,
 
-    "tie_breaker_description": "Highest single group size, then second highest group size",
+    "tie_breaker_description": "Last of the tied players in turn order wins",
     "losers_not_ranked": false,
     "solo_mode_ranked": false,
 

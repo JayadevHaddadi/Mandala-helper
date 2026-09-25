@@ -26,17 +26,20 @@ class EndScore extends GameState
     {
         $scores = $this->game->calculateAllScores();
         $bestScore = -1;
+        $players = $this->game->loadPlayersBasicInfos();
 
         foreach ($scores as $playerId => $data) {
             $pId = (int) $playerId;
             $scoreVal = (int) $data['score'];
             $groups = $data['groups'];
             $largestGroup = !empty($groups) ? (int) $groups[0] : 0;
-            $secondGroup = (count($groups) > 1) ? (int) $groups[1] : 0;
-            $thirdGroup = (count($groups) > 2) ? (int) $groups[2] : 0;
+            $playerNo = isset($players[$pId]) ? (int) $players[$pId]['player_no'] : 1;
 
-            // Auxiliary score for tiebreaking: largest * 10000 + second * 100 + third
-            $auxScore = ($largestGroup * 10000) + ($secondGroup * 100) + $thirdGroup;
+            // Official Néstor Romeral Andrés tiebreaker:
+            // "In case of a tie, the last of the tied players to have taken their turn wins."
+            // player_no represents turn order (1 = White, 2 = Black, 3 = Red, 4 = Blue).
+            // Higher player_no moved later in the round, winning the tiebreaker.
+            $auxScore = $playerNo;
 
             $this->bga->playerScore->set($pId, $scoreVal);
             $this->bga->playerScoreAux->set($pId, $auxScore);

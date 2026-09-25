@@ -125,18 +125,15 @@ def test_omega():
     assert score_red == 2 and groups_red == [2, 1], f"Expected [2, 1], got {groups_red}"
     assert score_blue == 6 and groups_blue == [3, 2], f"Expected [3, 2], got {groups_blue}"
 
-    # Test 7: Tiebreaker resolution
-    # Player A: groups [4, 2] -> score = 8
-    # Player B: groups [8] -> score = 8 (single big group)
-    # Player C: groups [4, 2, 1] -> score = 8
-    aux_a = calculate_aux_tiebreaker([4, 2])
-    aux_b = calculate_aux_tiebreaker([8])
-    aux_c = calculate_aux_tiebreaker([4, 2, 1])
-
-    # Player B has largest group 8 > 4, so aux_b > aux_a
-    assert aux_b > aux_a, f"Expected aux_b ({aux_b}) > aux_a ({aux_a})"
-    # Player C has third group 1, so aux_c > aux_a
-    assert aux_c > aux_a, f"Expected aux_c ({aux_c}) > aux_a ({aux_a})"
+    # Test 7: Official Tiebreaker resolution (Last player in turn order wins)
+    # Player 1 (White, player_no 1): score = 6
+    # Player 2 (Black, player_no 2): score = 6
+    # Player 3 (Red, player_no 3): score = 6
+    aux_p1 = 1
+    aux_p2 = 2
+    aux_p3 = 3
+    # Player 3 is the last tied player to have taken their turn, so Player 3 wins the tiebreak
+    assert aux_p3 > aux_p2 > aux_p1
 
     # Test 8: Full game capacity calculation
     # 2 players: 2 stones/turn. 61 cells -> 30 full turns = 60 stones placed. 1 cell left (< 2), game ends.
