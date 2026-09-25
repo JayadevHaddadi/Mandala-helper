@@ -67,7 +67,7 @@ def connect_sftp(host, port, username, password, max_retries=3, timeout=10):
                 time.sleep(3)
     raise ConnectionError(f"Failed to connect to {host}:{port} after {max_retries} attempts.")
 
-def sync_directory(sftp, local_dir, remote_dir, dry_run=False):
+def sync_directory(sftp, local_dir, remote_dir, dry_run=False, force=False):
     uploaded = 0
     skipped = 0
 
@@ -120,14 +120,14 @@ def sync_directory(sftp, local_dir, remote_dir, dry_run=False):
         r_path = posixpath.join(remote_dir, item)
 
         if os.path.isdir(l_path):
-            u, s = sync_directory(sftp, l_path, r_path, dry_run=dry_run)
+            u, s = sync_directory(sftp, l_path, r_path, dry_run=dry_run, force=force)
             uploaded += u
             skipped += s
         else:
             l_stat = os.stat(l_path)
             needs_upload = True
 
-            if not dry_run and item in remote_attrs:
+            if not force and not dry_run and item in remote_attrs:
                 r_stat = remote_attrs[item]
                 if r_stat.st_size == l_stat.st_size and int(r_stat.st_mtime) >= int(l_stat.st_mtime):
                     needs_upload = False
@@ -152,6 +152,7 @@ def main():
     parser.add_argument("target", help=f"Game target to sync. Supported: {', '.join(TARGET_MAP.keys())} or custom <local_dir>")
     parser.add_argument("remote_dir", nargs="?", default=None, help="Remote destination directory (optional if target is known)")
     parser.add_argument("--dry-run", action="store_true", help="Preview files that would be uploaded without connecting/uploading")
+    parser.add_argument("--force", action="store_true", help="Force upload all files regardless of remote mtime/size")
 
     args = parser.parse_args()
     target_key = args.target.lower()
@@ -170,7 +171,7 @@ def main():
     print(f"=== BGA Universal Sync: {target_key.upper()} ===")
     print(f"Local:  {local_base}")
     print(f"Remote: {remote_base}")
-    print(f"Mode:   {'DRY-RUN (No Upload)' if args.dry_run else 'LIVE SFTP UPLOAD'}\n")
+    print(f"Mode:   {'DRY-RUN (No Upload)' if args.dry_run else 'LIVE SFTP UPLOAD'}{' [FORCE]' if args.force else ''}\n")
 
     cfg = load_credentials()
     host = cfg.get("host", "1.studio.boardgamearena.com")
@@ -182,13 +183,13 @@ def main():
 
     if args.dry_run:
         print("[DRY-RUN] Simulating upload without SFTP connection...")
-        uploaded, skipped = sync_directory(None, local_base, remote_base, dry_run=True)
+        uploaded, skipped = sync_directory(None, local_base, remote_base, dry_run=True, force=args.force)
         print(f"\n[DRY-RUN COMPLETE] Would upload {uploaded} files ({skipped} unchanged) in {time.time() - t0:.2f}s.")
         return
 
     transport, sftp = connect_sftp(host, port, username, password)
     try:
-        uploaded, skipped = sync_directory(sftp, local_base, remote_base, dry_run=False)
+        uploaded, skipped = sync_directory(sftp, local_base, remote_base, dry_run=False, force=args.force)
         print(f"\n[SUCCESS] Synced {uploaded} file(s) ({skipped} unchanged) in {time.time() - t0:.2f}s!")
     finally:
         sftp.close()

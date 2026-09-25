@@ -85,7 +85,7 @@ jobs:
 
             if echo "$CHANGED" | grep -q "games/lordsofscotland"; then
               echo "Deploying Lords of Scotland..."
-              python tools/sync.py lordsofscotland
+              python tools/sync.py lordsofscotland --force
               DEPLOYED=1
             fi
 
