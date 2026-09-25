@@ -291,6 +291,10 @@ export class Game {
                         <span class="los-label">Lowest Face-Up</span>
                         <span id="los-lowest-val" class="los-val">${gamedatas.lowest_face_up !== null ? gamedatas.lowest_face_up : '-'}</span>
                     </div>
+                    <div class="los-status-item">
+                        <span class="los-label">Target Score</span>
+                        <span id="los-target-val" class="los-val">${gamedatas.target_score || 40} pts</span>
+                    </div>
                 </div>
 
                 <!-- Center Table: Recruit Row & Supporter Row -->

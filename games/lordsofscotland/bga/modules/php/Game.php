@@ -147,6 +147,7 @@ class Game extends \Bga\GameFramework\Table
             $this->globals->set('victor_initiative', $vi);
         }
         $result['victor_initiative'] = $vi;
+        $result['target_score'] = (int) $this->globals->get('target_score', 40);
         $result['clans'] = self::CLANS;
 
         // Recruit row (guarantee 5 slots)
@@ -284,10 +285,11 @@ class Game extends \Bga\GameFramework\Table
         // 2. Setup Globals: randomly determine who has Victor's Initiative for the first skirmish
         $playerIds = array_keys($players);
         $firstPlayerId = (int) $playerIds[array_rand($playerIds)];
-        $targetScoreOpt = (int) ($options[101] ?? 1);
+        $targetScoreOpt = (int) ($options[101] ?? 3);
         $targetScore = match ($targetScoreOpt) {
+            1 => 20,
             2 => 30,
-            3 => 20,
+            3 => 40,
             4 => 50,
             default => 40,
         };
