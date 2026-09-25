@@ -33,13 +33,14 @@ class EndScore extends GameState
             $scoreVal = (int) $data['score'];
             $groups = $data['groups'];
             $largestGroup = !empty($groups) ? (int) $groups[0] : 0;
-            $playerNo = isset($players[$pId]) ? (int) $players[$pId]['player_no'] : 1;
+            $color = $data['color'] ?? 'white';
+            $turnOrderMap = ['white' => 1, 'black' => 2, 'red' => 3, 'blue' => 4];
 
             // Official Néstor Romeral Andrés tiebreaker:
             // "In case of a tie, the last of the tied players to have taken their turn wins."
-            // player_no represents turn order (1 = White, 2 = Black, 3 = Red, 4 = Blue).
-            // Higher player_no moved later in the round, winning the tiebreaker.
-            $auxScore = $playerNo;
+            // In Omega, turn order is strictly: White (1st) -> Black (2nd) -> Red (3rd) -> Blue (4th).
+            // Higher turn order moved later in the round, winning the tiebreaker.
+            $auxScore = $turnOrderMap[$color] ?? 1;
 
             $this->bga->playerScore->set($pId, $scoreVal);
             $this->bga->playerScoreAux->set($pId, $auxScore);

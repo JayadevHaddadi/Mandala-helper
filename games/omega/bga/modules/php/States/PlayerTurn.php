@@ -34,6 +34,8 @@ class PlayerTurn extends GameState
                             empty($placedThisTurn) &&
                             ((int) $this->globals->get('turn_count', 1) === 2);
 
+        $turnInfo = $this->game->getMaxTurnsAndRounds();
+
         return [
             'empty_cells' => $this->game->getEmptyCells(),
             'placed_this_turn' => $placedThisTurn,
@@ -42,6 +44,9 @@ class PlayerTurn extends GameState
             'last_placed_coords' => $this->globals->get('last_placed_coords', []),
             'pie_rule_available' => $pieRuleAvailable,
             'scores' => $this->game->calculateAllScores(),
+            'turn_count' => (int) $this->globals->get('turn_count', 1),
+            'max_turns' => $turnInfo['max_turns'],
+            'max_rounds' => $turnInfo['max_rounds'],
         ];
     }
 

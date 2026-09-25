@@ -141,6 +141,9 @@ class PlayerTurn {
 
     onEnteringState(args, isCurrentPlayerActive) {
         args = args || {};
+        if (args.turn_count !== undefined) this.game.turnCount = args.turn_count;
+        if (args.max_turns !== undefined) this.game.maxTurns = args.max_turns;
+        if (args.max_rounds !== undefined) this.game.maxRounds = args.max_rounds;
         this.game.currentArgs = args;
         this.game.clearHighlights();
 
@@ -162,6 +165,9 @@ class PlayerTurn {
     updateControls(args, active) {
         this.game.clearActionButtons();
 
+        const turn = this.game.getTurnCount(args);
+        const maxTurns = this.game.getMaxTurns();
+
         if (active) {
             const staged = this.game.stagedStones || [];
             const allColors = this.game.activeColors || ['white', 'black'];
@@ -174,8 +180,10 @@ class PlayerTurn {
                 const totalSteps = allColors.length;
 
                 this.bga.statusBar.setTitle(
-                    _('${you} must place a <b>${color}</b> stone (${step}/${total})'),
+                    _('[Turn ${turn}/${maxTurns}] ${you} must place a <b>${color}</b> stone (${step}/${total})'),
                     {
+                        turn: turn,
+                        maxTurns: maxTurns,
                         color: currentColor.toUpperCase(),
                         step: stepNum,
                         total: totalSteps,
@@ -184,7 +192,13 @@ class PlayerTurn {
                 );
             } else {
                 // All stones staged for this turn!
-                this.bga.statusBar.setTitle(_('All stones placed! Review your turn, then click <b>Confirm Turn</b>.'));
+                this.bga.statusBar.setTitle(
+                    _('[Turn ${turn}/${maxTurns}] All stones placed! Review your turn, then click <b>Confirm Turn</b>.'),
+                    {
+                        turn: turn,
+                        maxTurns: maxTurns
+                    }
+                );
 
                 this.game.addActionButton('btnConfirmTurn', _('✓ Confirm Turn'), () => {
                     this.game.confirmTurn();
@@ -206,7 +220,13 @@ class PlayerTurn {
                 }, 'danger');
             }
         } else {
-            this.bga.statusBar.setTitle(_('${actplayer} is placing stones...'));
+            this.bga.statusBar.setTitle(
+                _('[Turn ${turn}/${maxTurns}] ${actplayer} is placing stones...'),
+                {
+                    turn: turn,
+                    maxTurns: maxTurns
+                }
+            );
         }
     }
 
@@ -282,6 +302,7 @@ export class Game {
     }
 
     setup(gamedatas) {
+        this.gamedatas = gamedatas;
         this.HEX_RADIUS = gamedatas.hex_radius || 4;
         const hexSizeByRadius = { 2: 52, 3: 40, 4: 30, 5: 24, 6: 20 };
         this.HEX_SIZE = hexSizeByRadius[this.HEX_RADIUS] || 30;
@@ -290,11 +311,16 @@ export class Game {
         this.activeColors = gamedatas.active_colors || ['white', 'black'];
         this.lastPlacedCoords = gamedatas.last_placed_coords || [];
         this.currentScores = gamedatas.scores || {};
+        this.turnCount = gamedatas.turn_count || 1;
+        this.maxTurns = gamedatas.max_turns || null;
+        this.maxRounds = gamedatas.max_rounds || null;
         this.currentArgs = {
             placed_this_turn: gamedatas.placed_this_turn || [],
             remaining_colors: this.getRemainingColors(gamedatas.placed_this_turn || []),
             scores: gamedatas.scores || {},
             pie_rule_available: gamedatas.pie_rule_available || false,
+            turn_count: this.turnCount,
+            max_turns: this.maxTurns,
         };
 
         this.initDom();
@@ -308,6 +334,25 @@ export class Game {
     getRemainingColors(placed) {
         placed = placed || [];
         return this.activeColors.filter(c => !placed.includes(c));
+    }
+
+    getTurnCount(args) {
+        if (args && args.turn_count !== undefined) {
+            this.turnCount = args.turn_count;
+        }
+        return this.turnCount || 1;
+    }
+
+    getMaxTurns() {
+        if (this.maxTurns) return this.maxTurns;
+        const r = this.HEX_RADIUS || 4;
+        const totalCells = 3 * r * (r + 1) + 1;
+        const numPlayers = Object.keys(this.bga?.players?.getPlayers?.() || this.gamedatas?.players || {}).length || 2;
+        const colorsPerTurn = (this.activeColors && this.activeColors.length) || numPlayers;
+        const stonesPerRound = numPlayers * colorsPerTurn;
+        const maxRounds = stonesPerRound > 0 ? Math.floor(totalCells / stonesPerRound) : 0;
+        this.maxTurns = maxRounds * numPlayers;
+        return this.maxTurns;
     }
 
     initDom() {
@@ -597,11 +642,12 @@ export class Game {
         // 1. Synchronize BGA sidebar player panel scores next to star ⭐ icon
         for (const [playerId, data] of Object.entries(scores)) {
             const scoreVal = data.score !== undefined ? data.score : 0;
-            if (this.scoreCtrl && this.scoreCtrl[playerId]) {
-                if (typeof this.scoreCtrl[playerId].toValue === 'function') {
-                    this.scoreCtrl[playerId].toValue(scoreVal);
-                } else if (typeof this.scoreCtrl[playerId].setValue === 'function') {
-                    this.scoreCtrl[playerId].setValue(scoreVal);
+            const counter = this.bga?.playerPanels?.getScoreCounter?.(playerId);
+            if (counter) {
+                if (typeof counter.toValue === 'function') {
+                    counter.toValue(scoreVal);
+                } else if (typeof counter.setValue === 'function') {
+                    counter.setValue(scoreVal);
                 }
             }
             const scoreEl = document.getElementById(`player_score_${playerId}`);

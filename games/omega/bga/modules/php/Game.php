@@ -153,8 +153,27 @@ class Game extends \Bga\GameFramework\Table
         $result['player_colors'] = $this->globals->get('player_colors', []);
         $result['active_colors'] = $this->getActiveColorsInGame();
         $result['hex_radius'] = (int) $this->globals->get('hex_radius', self::HEX_RADIUS);
+        $turnInfo = $this->getMaxTurnsAndRounds();
         $result['turn_count'] = (int) $this->globals->get('turn_count', 1);
+        $result['max_turns'] = $turnInfo['max_turns'];
+        $result['max_rounds'] = $turnInfo['max_rounds'];
         return $result;
+    }
+
+    public function getMaxTurnsAndRounds(): array
+    {
+        $radius = (int) $this->globals->get('hex_radius', self::HEX_RADIUS);
+        $totalCells = 3 * $radius * ($radius + 1) + 1;
+        $numPlayers = count($this->loadPlayersBasicInfos());
+        $colorsPerTurn = count($this->getActiveColorsInGame());
+        $stonesPerRound = $numPlayers * $colorsPerTurn;
+        $maxRounds = $stonesPerRound > 0 ? (int) floor($totalCells / $stonesPerRound) : 0;
+        $maxTurns = $maxRounds * $numPlayers;
+        return [
+            'max_turns' => $maxTurns,
+            'max_rounds' => $maxRounds,
+            'total_cells' => $totalCells,
+        ];
     }
 
     public function getBoardState(): array
