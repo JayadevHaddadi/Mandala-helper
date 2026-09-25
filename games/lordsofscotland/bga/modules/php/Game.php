@@ -124,8 +124,12 @@ class Game extends \Bga\GameFramework\Table
 
     public function getGameProgression(): int
     {
-        $maxScore = (int) self::getUniqueValueFromDb("SELECT MAX(`player_score`) FROM `player`") ?: 0;
-        return min(100, (int) round(($maxScore / 40) * 100));
+        $maxScore = 0;
+        foreach (array_keys($this->loadPlayersBasicInfos()) as $pId) {
+            $maxScore = max($maxScore, (int) $this->playerScore->get((int)$pId));
+        }
+        $targetScore = (int) $this->globals->get('target_score', 40);
+        return min(100, (int) round(($maxScore / $targetScore) * 100));
     }
 
     protected function getAllDatas(int $currentPlayerId): array
@@ -166,7 +170,6 @@ class Game extends \Bga\GameFramework\Table
         }
 
         $result['current_player_id'] = (int) $currentPlayerId;
-        $scores = self::getCollectionFromDb("SELECT `player_id`, `player_score` FROM `player`", true);
         $handCounts = self::getCollectionFromDb(
             "SELECT `location_arg` AS `player_id`, COUNT(*) AS `count` FROM `card` WHERE `location` = 'hand' GROUP BY `location_arg`",
             true
@@ -175,8 +178,6 @@ class Game extends \Bga\GameFramework\Table
             $pIdInt = (int) $pId;
             $result['players'][$pId]['player_id'] = $pIdInt;
             $result['players'][$pId]['id'] = $pIdInt;
-            $result['players'][$pId]['player_score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
-            $result['players'][$pId]['score'] = (int) ($scores[$pIdInt]['player_score'] ?? 0);
             $result['players'][$pId]['player_no'] = (int) ($pData['player_no'] ?? 0);
             $result['players'][$pId]['hand_count'] = (int) ($handCounts[$pId] ?? 0);
         }
@@ -283,6 +284,14 @@ class Game extends \Bga\GameFramework\Table
         // 2. Setup Globals: randomly determine who has Victor's Initiative for the first skirmish
         $playerIds = array_keys($players);
         $firstPlayerId = (int) $playerIds[array_rand($playerIds)];
+        $targetScoreOpt = (int) ($options[101] ?? 1);
+        $targetScore = match ($targetScoreOpt) {
+            2 => 30,
+            3 => 20,
+            4 => 50,
+            default => 40,
+        };
+        $this->globals->set('target_score', $targetScore);
         $this->globals->set('current_skirmish', 1);
         $this->globals->set('current_round', 1);
         $this->globals->set('victor_initiative', $firstPlayerId);

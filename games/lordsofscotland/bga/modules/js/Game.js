@@ -648,6 +648,11 @@ export class Game {
             this.bga.statusBar.setTitle(_('${you} may muster another clan card from your hand (Clan Makgill power)'));
             if (typeof this.bga.statusBar.addActionButton === 'function') {
                 this.bga.statusBar.addActionButton(
+                    _('↩ Undo Makgill'),
+                    () => this.bga.actions.performAction('actUndo', {}),
+                    { color: 'secondary' }
+                );
+                this.bga.statusBar.addActionButton(
                     _('Pass (Skip extra muster)'),
                     () => this.bga.actions.performAction('actPass', {}),
                     { color: 'secondary' }
@@ -1279,10 +1284,15 @@ export class Game {
         }
 
         // Update score in BGA sidebar player panel
-        if (this.bga?.playerPanels && typeof this.bga.playerPanels.setScore === 'function') {
+        if (this.bga?.playerPanels && typeof this.bga.playerPanels.getScoreCounter === 'function') {
+            const counter = this.bga.playerPanels.getScoreCounter(player_id);
+            if (counter && typeof counter.toValue === 'function') {
+                counter.toValue(new_score);
+            } else if (counter && typeof counter.setValue === 'function') {
+                counter.setValue(new_score);
+            }
+        } else if (this.bga?.playerPanels && typeof this.bga.playerPanels.setScore === 'function') {
             this.bga.playerPanels.setScore(player_id, new_score);
-        } else if (typeof gameui !== 'undefined' && typeof gameui.scoreCtrl?.[player_id]?.setValue === 'function') {
-            gameui.scoreCtrl[player_id].setValue(new_score);
         }
     }
 
@@ -1332,14 +1342,29 @@ export class Game {
         if (ownArmyRow && targetArmyRow) {
             const ownEl = ownArmyRow.querySelector(`[data-card-id="${fergusson_card_id}"]`);
             const targetEl = targetArmyRow.querySelector(`[data-card-id="${target_card_id}"]`);
-            if (ownEl) ownEl.remove();
-            if (targetEl) targetEl.remove();
 
             if (fergusson_card) {
-                targetArmyRow.appendChild(this.createCardElement(fergusson_card, 'army', target_player_id));
+                const newFergussonEl = this.createCardElement(fergusson_card, 'army', target_player_id);
+                if (targetEl && targetEl.parentNode) {
+                    targetEl.parentNode.replaceChild(newFergussonEl, targetEl);
+                } else {
+                    targetArmyRow.appendChild(newFergussonEl);
+                }
+                this.popInCard(newFergussonEl);
+            } else if (targetEl) {
+                targetEl.remove();
             }
+
             if (target_card) {
-                ownArmyRow.appendChild(this.createCardElement(target_card, 'army', player_id));
+                const newTargetEl = this.createCardElement(target_card, 'army', player_id);
+                if (ownEl && ownEl.parentNode) {
+                    ownEl.parentNode.replaceChild(newTargetEl, ownEl);
+                } else {
+                    ownArmyRow.appendChild(newTargetEl);
+                }
+                this.popInCard(newTargetEl);
+            } else if (ownEl) {
+                ownEl.remove();
             }
 
             this.updatePlayerArmyStrength(player_id);

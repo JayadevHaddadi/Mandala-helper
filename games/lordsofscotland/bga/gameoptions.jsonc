@@ -14,5 +14,31 @@
       }
     },
     "default": 1
+  },
+  "101": {
+    "name": "Target Score (Game Length)",
+    "values": {
+      "1": {
+        "name": "40 Points (Standard)",
+        "description": "First player to 40 or more points wins",
+        "tmdisplay": "40 pts"
+      },
+      "2": {
+        "name": "30 Points (Quick)",
+        "description": "First player to 30 or more points wins (shorter game)",
+        "tmdisplay": "30 pts"
+      },
+      "3": {
+        "name": "20 Points (Blitz)",
+        "description": "First player to 20 or more points wins (fast match)",
+        "tmdisplay": "20 pts"
+      },
+      "4": {
+        "name": "50 Points (Extended)",
+        "description": "First player to 50 or more points wins (longer match)",
+        "tmdisplay": "50 pts"
+      }
+    },
+    "default": 1
   }
 }

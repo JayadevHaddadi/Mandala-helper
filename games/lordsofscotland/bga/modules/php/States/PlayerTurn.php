@@ -315,6 +315,46 @@ class PlayerTurn extends GameState
         return NextPlayer::class;
     }
 
+    #[PossibleAction]
+    public function actUndo(): string
+    {
+        $activePlayerId = (int) $this->game->getActivePlayerId();
+        $callerPlayerId = (int) $this->game->getCurrentPlayerId();
+        if ($callerPlayerId && $callerPlayerId !== $activePlayerId) {
+            throw new UserException(clienttranslate('It is not your turn'));
+        }
+
+        $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
+        if (!$extraMuster) {
+            throw new UserException(clienttranslate('Nothing to undo'));
+        }
+
+        $pendingCardId = (int) $this->game->globals->get('pending_power_card_id', 0);
+        $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $pendingCardId AND `location` = 'army' AND `location_arg` = $activePlayerId");
+        if (!$card) {
+            throw new UserException(clienttranslate('No pending muster to undo'));
+        }
+
+        // Return Makgill card to hand
+        Game::DbQuery("UPDATE `card` SET `location` = 'hand', `location_arg` = $activePlayerId, `is_face_up` = 0, `power_activated` = 0, `round_played` = 0 WHERE `card_id` = $pendingCardId");
+        $this->game->globals->set('extra_muster_active', 0);
+        $this->game->globals->set('pending_power_card_id', 0);
+
+        $playerName = $this->game->getPlayerNameById($activePlayerId);
+        $this->notify->all("musterUndone", clienttranslate('${player_name} undid mustering Clan Makgill'), [
+            'player_id' => $activePlayerId,
+            'player_name' => $playerName,
+            'card_id' => $pendingCardId,
+        ]);
+
+        $this->notify->player($activePlayerId, "cardReturnedToHand", '', [
+            'card' => $card,
+            'player_id' => $activePlayerId,
+        ]);
+
+        return PlayerTurn::class;
+    }
+
     public function zombie(int $playerId): string
     {
         $this->game->globals->set('extra_muster_active', 0);

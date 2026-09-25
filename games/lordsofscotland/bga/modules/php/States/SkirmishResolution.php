@@ -205,14 +205,20 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
             'summary' => $summaryData,
         ]);
 
-        // Check if any player has reached 40 or more points
-        $maxScore = (int) Game::getUniqueValueFromDb("SELECT MAX(`player_score`) FROM `player`");
-        if ($maxScore >= 40) {
+        // Check if any player has reached target score
+        $targetScore = (int) $this->game->globals->get('target_score', 40);
+        $maxScore = 0;
+        $playerBasicInfos = $this->game->loadPlayersBasicInfos();
+        foreach (array_keys($playerBasicInfos) as $pId) {
+            $maxScore = max($maxScore, (int) $this->game->playerScore->get((int)$pId));
+        }
+
+        if ($maxScore >= $targetScore) {
             $rankCount = count($rankings);
             foreach ($rankings as $idx => $r) {
                 $auxScore = $rankCount - $idx;
                 $pId = (int) $r['player_id'];
-                Game::DbQuery("UPDATE `player` SET `player_score_aux` = $auxScore WHERE `player_id` = $pId");
+                $this->game->playerScoreAux->set($pId, $auxScore);
             }
             return EndScore::class;
         }
