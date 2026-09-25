@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bga\Games\omega\States;
 
+use Bga\GameFramework\Actions\Types\JsonParam;
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
@@ -45,12 +46,8 @@ class PlayerTurn extends GameState
     }
 
     #[PossibleAction]
-    public function actPlaceStones(string|array $stones, int $activePlayerId, array $args): string
+    public function actPlaceStones(#[JsonParam(alphanum: false)] array $stones, int $activePlayerId, array $args): string
     {
-        if (is_string($stones)) {
-            $decoded = json_decode($stones, true);
-            $stones = is_array($decoded) ? $decoded : [];
-        }
 
         $allColors = $this->game->getActiveColorsInGame();
         $expectedCount = count($allColors);
