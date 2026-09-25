@@ -18,6 +18,9 @@ class PlayerTurn {
         this.game.currentTurnArgs = args;
         this.game.undoStagedMuster();
         if (isCurrentPlayerActive) {
+            if (Array.isArray(args.hand_cards)) {
+                this.game.renderHand(args.hand_cards);
+            }
             this.game.resetTurnPrompt(args);
             this.game.highlightRecruitCards(args.can_recruit);
             this.game.highlightHandCards(true, args.hand_cards);
@@ -204,11 +207,10 @@ export class Game {
     }
 
     isCurrentPlayerActive() {
-        if (this.bga && typeof this.bga.isCurrentPlayerActive === 'function') {
-            return this.bga.isCurrentPlayerActive();
-        }
-        if (this.bga?.states && typeof this.bga.states.isCurrentPlayerActive === 'function') {
-            return this.bga.states.isCurrentPlayerActive();
+        const actId = this.getActivePlayerId();
+        const curId = this.getCurrentPlayerId();
+        if (actId !== null && curId !== null) {
+            return parseInt(actId, 10) === parseInt(curId, 10);
         }
         if (this.bga?.players && typeof this.bga.players.isCurrentPlayerActive === 'function') {
             return this.bga.players.isCurrentPlayerActive();
@@ -1372,16 +1374,51 @@ export class Game {
 
     async notif_powerScottUsed(notif) {
         const args = this._getNotifArgs(notif);
-        const { scott_card_id, copied_clan_name } = args;
+        const { scott_card_id, copied_clan, copied_clan_name } = args;
         const cardEl = document.querySelector(`#los-armies-container [data-card-id="${scott_card_id}"]`);
         if (cardEl) {
             let badge = cardEl.querySelector('.los-copied-badge');
             if (!badge) {
                 badge = document.createElement('div');
                 badge.className = 'los-copied-badge';
-                cardEl.appendChild(badge);
+                const body = cardEl.querySelector('.los-card-body') || cardEl;
+                body.appendChild(badge);
             }
-            badge.textContent = `Copied: ${copied_clan_name}`;
+            const icon = this.getClanIcon(copied_clan || '');
+            badge.innerHTML = `Copied: ${icon} ${copied_clan_name}`;
+
+            if (['cochrane', 'macdonnell', 'bruce'].includes(copied_clan)) {
+                let activeBadge = cardEl.querySelector('.los-active-power-badge');
+                if (!activeBadge) {
+                    activeBadge = document.createElement('div');
+                    activeBadge.className = 'los-active-power-badge';
+                    cardEl.prepend(activeBadge);
+                }
+                if (copied_clan === 'cochrane') activeBadge.textContent = '⚡ 2 Supporters';
+                else if (copied_clan === 'macdonnell') activeBadge.textContent = '⚡ Persists';
+                else if (copied_clan === 'bruce') activeBadge.textContent = '⚡ Wild';
+            }
+        }
+        this.updateAllArmyStrengths();
+        this.updateLowestFaceUp();
+    }
+
+    async notif_cardRecruitedPrivate(notif) {
+        const args = this._getNotifArgs(notif);
+        const { card, player_id } = args;
+        if (this.isCurrentPlayer(player_id) && card) {
+            const handContainer = document.getElementById('los-hand-cards');
+            if (handContainer) {
+                const existing = handContainer.querySelector(`[data-card-id="${card.card_id}"]`);
+                if (existing) existing.remove();
+                const emptyMsg = handContainer.querySelector('.los-empty-msg');
+                if (emptyMsg) emptyMsg.remove();
+                const newCardEl = this.createCardElement(card, 'hand');
+                handContainer.appendChild(newCardEl);
+                this.popInCard(newCardEl);
+                const countEl = document.getElementById('los-hand-count');
+                if (countEl) countEl.textContent = `(${handContainer.children.length} / 10 cards)`;
+            }
         }
     }
 

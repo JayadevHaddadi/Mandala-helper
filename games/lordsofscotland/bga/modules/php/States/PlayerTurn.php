@@ -57,6 +57,11 @@ class PlayerTurn extends GameState
     public function actRecruit(int $card_id): string
     {
         $activePlayerId = (int) $this->game->getActivePlayerId();
+        $callerPlayerId = (int) $this->game->getCurrentPlayerId();
+        if ($callerPlayerId && $callerPlayerId !== $activePlayerId) {
+            throw new UserException(clienttranslate('It is not your turn'));
+        }
+
         $extraMuster = (int) $this->game->globals->get('extra_muster_active', 0) === 1;
         if ($extraMuster) {
             throw new UserException(clienttranslate('You used Clan Makgill to muster another clan and must muster now'));
@@ -104,7 +109,7 @@ class PlayerTurn extends GameState
         // Precompute power readiness so recipient immediately sees power state in hand
         $card['can_activate_power'] = $this->game->canActivatePower((int)$card['strength'], $card['clan']);
 
-        $publicCard = $wasFaceUp ? $card : ['card_id' => $card['card_id'], 'clan' => 'hidden', 'strength' => 0, 'is_face_up' => 0];
+        $publicCard = $wasFaceUp ? $card : null;
 
         $this->notify->all("cardRecruited", clienttranslate('${player_name} recruits a clan card from slot ${slot_display}'), [
             'player_id' => $activePlayerId,
@@ -119,7 +124,7 @@ class PlayerTurn extends GameState
 
         if (!$wasFaceUp) {
             // Tell only the recruiting player the true identity of their new hand card.
-            $this->notify->player($activePlayerId, "cardRecruited", '', [
+            $this->notify->player($activePlayerId, "cardRecruitedPrivate", '', [
                 'player_id' => $activePlayerId,
                 'card_id' => $card_id,
                 'card' => $card,
@@ -133,6 +138,11 @@ class PlayerTurn extends GameState
     public function actMuster(int $card_id, int $face_up): string
     {
         $activePlayerId = (int) $this->game->getActivePlayerId();
+        $callerPlayerId = (int) $this->game->getCurrentPlayerId();
+        if ($callerPlayerId && $callerPlayerId !== $activePlayerId) {
+            throw new UserException(clienttranslate('It is not your turn'));
+        }
+
         $face_up = ($face_up === 1);
         $card = Game::getObjectFromDb("SELECT * FROM `card` WHERE `card_id` = $card_id AND `location` = 'hand' AND `location_arg` = $activePlayerId");
         if (!$card) {

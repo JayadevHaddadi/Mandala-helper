@@ -222,18 +222,30 @@ class SkirmishResolution extends \Bga\GameFramework\States\GameState
         //    activated this skirmish and hasn't already used its one bonus round. Rulebook: "After
         //    its first round, [...] its power is no longer active" — so persisted=1 cards discard
         //    normally here, they don't get a second reprieve.
-        $macdonnellSurvivor = "(
-            ((`clan` = 'macdonnell' AND `power_activated` = 1) OR (`clan` = 'scott' AND `copied_clan` = 'macdonnell' AND `power_activated` = 1))
-            AND `persisted` = 0
-        )";
-        Game::DbQuery(
-            "UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0, `persisted` = 0, `power_activated` = 0, `copied_clan` = NULL
-             WHERE `location` = 'army' AND NOT $macdonnellSurvivor"
-        );
-        Game::DbQuery(
-            "UPDATE `card` SET `persisted` = 1, `power_activated` = 0, `copied_clan` = NULL
-             WHERE `location` = 'army' AND $macdonnellSurvivor"
-        );
+        $survivors = Game::getObjectListFromDb("
+            SELECT `card_id` FROM `card`
+            WHERE `location` = 'army'
+              AND `persisted` = 0
+              AND `power_activated` = 1
+              AND (`clan` = 'macdonnell' OR (`clan` = 'scott' AND `copied_clan` = 'macdonnell'))
+        ");
+        $survivorIds = !empty($survivors) ? implode(',', array_column($survivors, 'card_id')) : '';
+
+        if (!empty($survivorIds)) {
+            Game::DbQuery(
+                "UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0, `persisted` = 0, `power_activated` = 0, `copied_clan` = NULL
+                 WHERE `location` = 'army' AND `card_id` NOT IN ($survivorIds)"
+            );
+            Game::DbQuery(
+                "UPDATE `card` SET `persisted` = 1, `power_activated` = 0, `copied_clan` = NULL
+                 WHERE `location` = 'army' AND `card_id` IN ($survivorIds)"
+            );
+        } else {
+            Game::DbQuery(
+                "UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0, `persisted` = 0, `power_activated` = 0, `copied_clan` = NULL
+                 WHERE `location` = 'army'"
+            );
+        }
 
         // 2. Discard remaining recruit and supporter cards
         Game::DbQuery("UPDATE `card` SET `location` = 'discard', `location_arg` = 0, `is_face_up` = 0 WHERE `location` IN ('recruit', 'supporter')");
