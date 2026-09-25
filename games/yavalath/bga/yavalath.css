@@ -92,6 +92,18 @@
     animation: yav_btn_pulse 1.5s infinite alternate;
 }
 
+#yavalath_swap_btn {
+    background: #e8eaf6;
+    color: #283593;
+    border-color: #9fa8da;
+    font-weight: 700;
+}
+
+#yavalath_swap_btn:hover:not(:disabled) {
+    background: #c5cae9;
+    border-color: #5c6bc0;
+}
+
 @keyframes yav_btn_pulse {
     from { transform: scale(1); }
     to { transform: scale(1.04); }

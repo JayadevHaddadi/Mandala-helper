@@ -1,10 +1,32 @@
 {
     "100": {
-        "name": "Game Mode",
+        "name": "Board Size & Ruleset",
         "values": {
             "1": {
-                "name": "Standard",
-                "description": "Standard Yavalath rules (4 in a row wins, 3 in a row loses)"
+                "name": "Standard (Side 5)",
+                "description": "Standard board (61 cells). Connect 4 to WIN, 3 to LOSE."
+            },
+            "2": {
+                "name": "Five-not-four (Side 6)",
+                "description": "Large board (91 cells). Connect 5 to WIN, 4 to LOSE."
+            },
+            "3": {
+                "name": "Compact (Side 4)",
+                "description": "Compact board (37 cells). Fast game. Connect 4 to WIN, 3 to LOSE."
+            }
+        },
+        "default": 1
+    },
+    "101": {
+        "name": "Pie Rule (Swap)",
+        "values": {
+            "1": {
+                "name": "Disabled",
+                "description": "Standard opening without color swapping."
+            },
+            "2": {
+                "name": "Enabled",
+                "description": "In 2-player games, Player 2 can choose to swap colors after Player 1's opening move."
             }
         },
         "default": 1

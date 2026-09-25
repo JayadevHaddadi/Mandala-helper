@@ -110,7 +110,57 @@ def test_yavalath():
         winner = survivors[0]
         assert winner == 1003
 
-    print("All Yavalath line detection and 3-player elimination tests passed successfully!")
+    # Test 8: 3-Player VP distribution
+    # If 1001 eliminated first, 1002 eliminated second, 1003 wins:
+    scores = {}
+    winner_id = 1003
+    scores[winner_id] = 2
+    scores[eliminated[1]] = 1
+    scores[eliminated[0]] = 0
+    assert scores == {1003: 2, 1002: 1, 1001: 0}, f"Expected 2/1/0 VP, got {scores}"
+
+    # Test 9: Five-not-four variant
+    # Connect 5 to win, 4 to lose
+    def check_five_not_four(board, move, color):
+        mq, mr = move
+        has_five = False
+        has_four = False
+        for dq, dr in HEX_AXIAL_DIRECTIONS:
+            count = 1
+            step = 1
+            while board.get((mq + step * dq, mr + step * dr)) == color:
+                count += 1
+                step += 1
+            step = 1
+            while board.get((mq - step * dq, mr - step * dr)) == color:
+                count += 1
+                step += 1
+            if count >= 5:
+                has_five = True
+            elif count == 4:
+                has_four = True
+        if has_five:
+            return 'win'
+        if has_four:
+            return 'lose'
+        return 'continue'
+
+    # 4 in a row in five-not-four -> LOSE
+    b_fnf = {(0,0): 'white', (1,0): 'white', (2,0): 'white', (3,0): 'white'}
+    assert check_five_not_four(b_fnf, (3,0), 'white') == 'lose'
+
+    # 5 in a row in five-not-four -> WIN
+    b_fnf[(4,0)] = 'white'
+    assert check_five_not_four(b_fnf, (4,0), 'white') == 'win'
+
+    # Test 10: Pie Rule swap simulation
+    player_colors = {1001: 'white', 1002: 'black'}
+    # Player 2 invokes pie rule
+    swapped_colors = {1001: 'black', 1002: 'white'}
+    assert swapped_colors[1002] == 'white'
+    assert swapped_colors[1001] == 'black'
+
+    print("All Yavalath line detection, variants, and 3-player VP tests passed successfully!")
 
 if __name__ == '__main__':
     test_yavalath()

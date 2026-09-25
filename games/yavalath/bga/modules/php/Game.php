@@ -37,8 +37,10 @@ class Game extends \Bga\GameFramework\Table
 
     public function getGameProgression(): int
     {
+        $radius = (int) $this->globals->get('hex_radius', 4);
+        $totalCells = 3 * $radius * ($radius + 1) + 1;
         $placed = (int) $this->getUniqueValueFromDb("SELECT COUNT(*) FROM `board` WHERE `color` IS NOT NULL");
-        return (int) min(100, round(($placed / 61) * 100));
+        return (int) min(100, round(($placed / max(1, $totalCells)) * 100));
     }
 
     public function ensureSchema(): void
@@ -96,7 +98,30 @@ class Game extends \Bga\GameFramework\Table
 
         $this->reloadPlayersBasicInfos();
 
-        $radius = self::HEX_RADIUS;
+        // Read game options
+        $gameMode = (int) ($options[100] ?? ($this->tableOptions ? $this->tableOptions->get(100) : 1) ?? 1);
+        $pieRuleOption = (int) ($options[101] ?? ($this->tableOptions ? $this->tableOptions->get(101) : 1) ?? 1);
+
+        // Configure board radius and line lengths
+        // Mode 1: Standard (Radius 4, side 5, 61 cells, win 4, lose 3)
+        // Mode 2: Five-not-four (Radius 5, side 6, 91 cells, win 5, lose 4)
+        // Mode 3: Compact (Radius 3, side 4, 37 cells, win 4, lose 3)
+        if ($gameMode === 2) {
+            $radius = 5;
+            $winLength = 5;
+            $loseLength = 4;
+        } elseif ($gameMode === 3) {
+            $radius = 3;
+            $winLength = 4;
+            $loseLength = 3;
+        } else {
+            $radius = 4;
+            $winLength = 4;
+            $loseLength = 3;
+        }
+
+        $pieRuleEnabled = ($pieRuleOption === 2 && count($players) === 2);
+
         $values = [];
         for ($q = -$radius; $q <= $radius; $q++) {
             for ($r = -$radius; $r <= $radius; $r++) {
@@ -115,6 +140,12 @@ class Game extends \Bga\GameFramework\Table
         $this->globals->set('winner_id', 0);
         $this->globals->set('loser_id', 0);
         $this->globals->set('end_reason', '');
+        $this->globals->set('game_mode', $gameMode);
+        $this->globals->set('hex_radius', $radius);
+        $this->globals->set('win_length', $winLength);
+        $this->globals->set('lose_length', $loseLength);
+        $this->globals->set('pie_rule_enabled', $pieRuleEnabled);
+        $this->globals->set('pie_rule_used', false);
 
         $this->tableStats->init(['turns_number', 'win_by_four', 'win_by_opponent_three'], 0);
         $this->playerStats->init(['turns_number', 'stones_placed'], 0);
@@ -133,7 +164,12 @@ class Game extends \Bga\GameFramework\Table
         $result['board'] = $this->getBoardState();
         $result['player_colors'] = $this->globals->get('player_colors', []);
         $result['eliminated_players'] = $this->globals->get('eliminated_players', []);
-        $result['hex_radius'] = self::HEX_RADIUS;
+        $result['hex_radius'] = (int) $this->globals->get('hex_radius', 4);
+        $result['win_length'] = (int) $this->globals->get('win_length', 4);
+        $result['lose_length'] = (int) $this->globals->get('lose_length', 3);
+        $result['game_mode'] = (int) $this->globals->get('game_mode', 1);
+        $result['pie_rule_enabled'] = (bool) $this->globals->get('pie_rule_enabled', false);
+        $result['pie_rule_used'] = (bool) $this->globals->get('pie_rule_used', false);
         $result['turn_count'] = (int) $this->globals->get('turn_count', 1);
         return $result;
     }
@@ -156,7 +192,7 @@ class Game extends \Bga\GameFramework\Table
 
     public function isValidCoord(int $q, int $r): bool
     {
-        $radius = self::HEX_RADIUS;
+        $radius = (int) $this->globals->get('hex_radius', 4);
         return ($q >= -$radius && $q <= $radius &&
                 $r >= -$radius && $r <= $radius &&
                 ($q + $r) >= -$radius && ($q + $r) <= $radius);
@@ -183,16 +219,20 @@ class Game extends \Bga\GameFramework\Table
 
     /**
      * Inspect all 3 axes passing through (q, r) to evaluate win/loss conditions:
-     * - 4+ in a row: WIN
-     * - exactly 3 in a row (with no 4): LOSE
+     * - win_length (e.g. 4 or 5) in a row: WIN
+     * - lose_length (e.g. 3 or 4) in a row: LOSE
+     * WIN takes precedence if both conditions are triggered simultaneously.
      */
     public function evaluateMove(int $q, int $r, string $color): array
     {
         $board = $this->getBoardState();
         $board["{$q}_{$r}"] = ['q' => $q, 'r' => $r, 'color' => $color];
 
-        $hasFour = false;
-        $hasThree = false;
+        $winLength = (int) $this->globals->get('win_length', 4);
+        $loseLength = (int) $this->globals->get('lose_length', 3);
+
+        $hasWin = false;
+        $hasLose = false;
         $winningLine = [];
         $losingLine = [];
 
@@ -230,19 +270,19 @@ class Game extends \Bga\GameFramework\Table
                 }
             }
 
-            if (count($line) >= 4) {
-                $hasFour = true;
+            if (count($line) >= $winLength) {
+                $hasWin = true;
                 $winningLine = $line;
-            } elseif (count($line) === 3) {
-                $hasThree = true;
+            } elseif (count($line) === $loseLength) {
+                $hasLose = true;
                 $losingLine = $line;
             }
         }
 
-        if ($hasFour) {
+        if ($hasWin) {
             return ['status' => 'win', 'line' => $winningLine];
         }
-        if ($hasThree) {
+        if ($hasLose) {
             return ['status' => 'lose', 'line' => $losingLine];
         }
 
@@ -253,5 +293,59 @@ class Game extends \Bga\GameFramework\Table
         }
 
         return ['status' => 'continue', 'line' => []];
+    }
+
+    /**
+     * Pie Rule (Swap Rule): In 2-player games on turn 2, Player 2 can choose to swap colors.
+     * Player 2 takes White (and the first placed stone), and Player 1 becomes Black.
+     */
+    public function swapColors(int $swappingPlayerId): void
+    {
+        $playerColors = $this->globals->get('player_colors', []);
+        $playerIds = array_keys($this->loadPlayersBasicInfos());
+        if (count($playerIds) !== 2) {
+            throw new UserException(clienttranslate("Pie rule is only available in 2-player games."));
+        }
+
+        $whitePlayerId = 0;
+        $blackPlayerId = 0;
+        foreach ($playerColors as $pId => $col) {
+            if ($col === 'white') {
+                $whitePlayerId = (int) $pId;
+            } elseif ($col === 'black') {
+                $blackPlayerId = (int) $pId;
+            }
+        }
+
+        if ($swappingPlayerId !== $blackPlayerId) {
+            throw new UserException(clienttranslate("Only the second player can invoke the Pie Rule."));
+        }
+
+        $newColors = [
+            $whitePlayerId => 'black',
+            $blackPlayerId => 'white',
+        ];
+
+        $this->globals->set('player_colors', $newColors);
+        $this->globals->set('pie_rule_used', true);
+
+        // Update database player table player_color
+        static::DbQuery("UPDATE `player` SET `player_color` = '222222' WHERE `player_id` = {$whitePlayerId}");
+        static::DbQuery("UPDATE `player` SET `player_color` = 'ffffff' WHERE `player_id` = {$blackPlayerId}");
+
+        // Update ownership of the placed white stone
+        static::DbQuery("UPDATE `board` SET `player_id` = {$blackPlayerId} WHERE `color` = 'white'");
+
+        $this->reloadPlayersBasicInfos();
+
+        $swapperName = $this->loadPlayersBasicInfos()[$blackPlayerId]['player_name'];
+        $origWhiteName = $this->loadPlayersBasicInfos()[$whitePlayerId]['player_name'];
+
+        $this->notifyAllPlayers('colorsSwapped', clienttranslate('${player_name} chose the Pie Rule and swapped colors! ${player_name} is now White, and ${other_player_name} is now Black.'), [
+            'swapping_player_id' => $blackPlayerId,
+            'player_name' => $swapperName,
+            'other_player_name' => $origWhiteName,
+            'player_colors' => $newColors,
+        ]);
     }
 }

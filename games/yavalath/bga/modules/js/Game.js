@@ -155,12 +155,25 @@ class PlayerTurn {
 
         const active = (isCurrentPlayerActive !== undefined) ? isCurrentPlayerActive : this.game.isCurrentPlayerActive();
         this.game.updateBoardInteractions(active);
-        this.game.updateTurnStatus(active);
+        this.game.updateTurnStatus(active, args);
+
+        // Manage Pie Rule Swap Button
+        const swapBtn = document.getElementById('yavalath_swap_btn');
+        if (args.can_swap && active) {
+            if (swapBtn) swapBtn.style.display = 'inline-flex';
+            this.game.addActionButton('yavalath_bga_swap_btn', _('Swap Colors (Pie Rule)'), () => {
+                this.game.onPieRuleSwap();
+            }, 'secondary');
+        } else {
+            if (swapBtn) swapBtn.style.display = 'none';
+        }
     }
 
     onLeavingState() {
         this.game.clearHighlights();
         this.game.clearPendingMove();
+        const swapBtn = document.getElementById('yavalath_swap_btn');
+        if (swapBtn) swapBtn.style.display = 'none';
     }
 }
 
@@ -169,6 +182,10 @@ export class Game {
         this.bga = bga;
         this.HEX_RADIUS = 4;
         this.HEX_SIZE = 30;
+        this.winLength = 4;
+        this.loseLength = 3;
+        this.pieRuleEnabled = false;
+        this.pieRuleUsed = false;
         this.boardData = {};
         this.playerColors = {};
         this.eliminatedPlayers = [];
@@ -213,6 +230,10 @@ export class Game {
 
     setup(gamedatas) {
         this.HEX_RADIUS = gamedatas.hex_radius || 4;
+        this.winLength = gamedatas.win_length || 4;
+        this.loseLength = gamedatas.lose_length || 3;
+        this.pieRuleEnabled = !!gamedatas.pie_rule_enabled;
+        this.pieRuleUsed = !!gamedatas.pie_rule_used;
         this.boardData = gamedatas.board || {};
         this.playerColors = gamedatas.player_colors || {};
         this.eliminatedPlayers = gamedatas.eliminated_players || [];
@@ -230,14 +251,17 @@ export class Game {
             <div id="yavalath_container">
                 <div id="yavalath_header_info">
                     <span class="yavalath_rule_badge">
-                        <span>&#10004;</span> Win: 4 in a row
+                        <span>&#10004;</span> Win: ${this.winLength} in a row
                     </span>
                     <span class="yavalath_rule_badge yavalath_lose_badge">
-                        <span>&#9888;</span> Lose: 3 in a row
+                        <span>&#9888;</span> Lose: ${this.loseLength} in a row
                     </span>
                     <span id="yavalath_turn_badge" class="yavalath_rule_badge yavalath_turn_badge">
                         Turn: ${this.turnCount}
                     </span>
+                    <button id="yavalath_swap_btn" class="yavalath_ctrl_btn" type="button" style="display:none;" title="Swap colors with Player 1 (Pie Rule)">
+                        <span>&#8644;</span> Swap Colors (Pie Rule)
+                    </button>
                     <button id="yavalath_undo_btn" class="yavalath_ctrl_btn" type="button" disabled title="Undo staged stone before confirming">
                         <span>&#8634;</span> Undo
                     </button>
@@ -270,12 +294,30 @@ export class Game {
                 this.undoPendingMove();
             });
         }
+
+        const swapBtn = document.getElementById('yavalath_swap_btn');
+        if (swapBtn) {
+            swapBtn.addEventListener('click', () => {
+                this.onPieRuleSwap();
+            });
+        }
     }
 
-    updateTurnStatus(active) {
+    onPieRuleSwap() {
+        if (!this.isCurrentPlayerActive()) return;
+        this.bgaPerformAction('actSwapColors');
+    }
+
+    updateTurnStatus(active, args) {
         if (!this.bga?.statusBar) return;
+        const win = this.winLength || 4;
+        const lose = this.loseLength || 3;
         if (active) {
-            this.bga.statusBar.setTitle(_('${you} must place a stone (Connect 4 to WIN, avoid 3!)'));
+            if (args && args.can_swap) {
+                this.bga.statusBar.setTitle(_('${you} may place a stone OR invoke the Pie Rule to swap colors!'));
+            } else {
+                this.bga.statusBar.setTitle(_('${you} must place a stone (Connect ${win} to WIN, avoid ${lose}!)').replace('${win}', win).replace('${lose}', lose));
+            }
         } else {
             this.bga.statusBar.setTitle(_('${actplayer} is choosing a placement...'));
         }
@@ -320,7 +362,9 @@ export class Game {
         if (!svg) return;
 
         const radius = this.HEX_RADIUS;
-        const size = this.HEX_SIZE;
+        const sizeMap = { 3: 38, 4: 30, 5: 24.5 };
+        const size = sizeMap[radius] || 30;
+        this.HEX_SIZE = size;
         const svgWidth = 620;
         const svgHeight = 620;
         const centerX = svgWidth / 2;
@@ -604,12 +648,27 @@ export class Game {
         } else if (typeof dojo !== 'undefined' && typeof dojo.subscribe === 'function') {
             dojo.subscribe('stonePlaced', this, 'notif_stonePlaced');
             dojo.subscribe('playerEliminated', this, 'notif_playerEliminated');
+            dojo.subscribe('colorsSwapped', this, 'notif_colorsSwapped');
             dojo.subscribe('endGameScores', this, 'notif_endGameScores');
         } else if (typeof this.bga?.notifications?.subscribe === 'function') {
             this.bga.notifications.subscribe('stonePlaced', (notif) => this.notif_stonePlaced(notif));
             this.bga.notifications.subscribe('playerEliminated', (notif) => this.notif_playerEliminated(notif));
+            this.bga.notifications.subscribe('colorsSwapped', (notif) => this.notif_colorsSwapped(notif));
             this.bga.notifications.subscribe('endGameScores', (notif) => this.notif_endGameScores(notif));
         }
+    }
+
+    notif_colorsSwapped(notif) {
+        sounds.playPlace();
+        const args = this._getNotifArgs(notif);
+        if (args.player_colors) {
+            this.playerColors = args.player_colors;
+        }
+
+        const swapBtn = document.getElementById('yavalath_swap_btn');
+        if (swapBtn) swapBtn.style.display = 'none';
+
+        this.updateBoardInteractions(this.isCurrentPlayerActive());
     }
 
     _getNotifArgs(notif) {
