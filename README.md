@@ -57,8 +57,8 @@ python tools/sync.py omega
 # Mandala Production (syncs games/mandala/bga-prod -> remote mandala)
 python tools/sync.py mandala
 
-# Lords of Scotland (syncs games/lordsofscotland/bga -> remote lordsofscotlandtest)
-python tools/sync.py lordsofscotlandtest
+# Lords of Scotland (syncs games/lordsofscotland/bga -> remote lordsofscotland)
+python tools/sync.py lordsofscotland
 
 # Preview changes without uploading (Dry Run)
 python tools/sync.py pushfighttest --dry-run

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Bga\Games\lordsofscotlandtest\States;
+namespace Bga\Games\lordsofscotland\States;
 
 use Bga\GameFramework\StateType;
-use Bga\Games\lordsofscotlandtest\Game;
+use Bga\Games\lordsofscotland\Game;
 
 class NextPlayer extends \Bga\GameFramework\States\GameState
 {

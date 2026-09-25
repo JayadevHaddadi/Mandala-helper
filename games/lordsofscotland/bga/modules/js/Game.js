@@ -1,7 +1,7 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * lordsofscotlandtest implementation : © Jayadev Haddadi
+ * lordsofscotland implementation : © Jayadev Haddadi
  * -----
  * 
  * Game.js

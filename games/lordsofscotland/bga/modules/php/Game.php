@@ -2,17 +2,17 @@
 /**
  *------
  * BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
- * lordsofscotlandtest implementation : © Jayadev Haddadi
+ * lordsofscotland implementation : © Jayadev Haddadi
  * -----
  *
  * Game.php
  */
 declare(strict_types=1);
 
-namespace Bga\Games\lordsofscotlandtest;
+namespace Bga\Games\lordsofscotland;
 
-use Bga\Games\lordsofscotlandtest\States\PlayerTurn;
-use Bga\Games\lordsofscotlandtest\States\EndScore;
+use Bga\Games\lordsofscotland\States\PlayerTurn;
+use Bga\Games\lordsofscotland\States\EndScore;
 
 class Game extends \Bga\GameFramework\Table
 {

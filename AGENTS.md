@@ -27,7 +27,7 @@ Every change should be committed and pushed to `main`. The GitHub Actions deploy
 | :--- | :--- | :--- | :--- |
 | **Omega** | `games/omega/bga/` | `omega` (prod) / `omegatest` | `python tools/sync.py omega` |
 | **Yavalath** | `games/yavalath/bga/` | `yavalath` | `python tools/sync.py yavalath` |
-| **Lords of Scotland** | `games/lordsofscotland/bga/` | `lordsofscotlandtest` | `python tools/sync.py lordsofscotlandtest` |
+| **Lords of Scotland** | `games/lordsofscotland/bga/` | `lordsofscotland` | `python tools/sync.py lordsofscotland` |
 | **Push Fight** | `games/pushfight/bga/` | `pushfighttest` / `pushfight` | `python tools/sync.py pushfighttest` |
 | **Mandala** | `games/mandala/bga-prod/` | `mandala` | `python tools/sync.py mandala` |
 

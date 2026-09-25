@@ -1,7 +1,7 @@
 
 -- ------
 -- BGA framework: Gregory Isabelli & Emmanuel Colin & BoardGameArena
--- lordsofscotlandtest implementation : © Jayadev Haddadi
+-- lordsofscotland implementation : © Jayadev Haddadi
 -- 
 -- This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
 -- See http://en.boardgamearena.com/#!doc/Studio for more information.

@@ -13,7 +13,7 @@ This document tracks publisher/designer permissions, communications, contact inf
 | **Yavalath** | Cameron Browne, Ludi | nestorgames (Néstor Romeral Andrés) | 🟢 **Ready for Testing** | Built on BGA (`yavalath`) |
 | **Omega** | Néstor Romeral Andrés | nestorgames | 🟢 **Ready for Testing** | Built on BGA (`omegatest`) |
 | **Seven** | Néstor Romeral Andrés | nestorgames | 🟢 **Approved** (SVGs received) | Rule clarification needed |
-| **Lords of Scotland**| Richard Sivél | Z-Man Games / Asmodee | 🟡 **Pending Studio Approval** | Core Engine Ready (`lordsofscotlandtest`) |
+| **Lords of Scotland**| Richard Sivél | Z-Man Games / Asmodee | 🟡 **Pending Studio Approval** | Core Engine Ready (`lordsofscotland`) |
 | **Taiji** | Néstor Romeral Andrés | nestorgames | ⚪ Inquiry Sent | Backlog |
 | **Amazons** | Walter Zamkauskas | nestorgames (edition) | ⚪ Inquiry Sent | Backlog |
 | **ConHex** | Michail Antonow | nestorgames (edition) | ⚪ Inquiry Sent | Backlog |
@@ -61,15 +61,15 @@ This document tracks publisher/designer permissions, communications, contact inf
 
 ### 4. Lords of Scotland
 * **Designer**: Richard Sivél
-* **Publisher**: Z-Man Games (Asmodee Group)
+* **Publisher**: Z-Man Games (Studio Big / Asmodee Group)
 * **Key Contacts**:
-  * **Asmodee Corporate Contact Form**: Submitted via `asmodee-entertainment.biz` / Asmodee corporate contact (Licensing Team).
-  * **Asmodee North America Business/Legal**: `inquiries@asmodeena.com` *(Official contact listed directly on zmangames.com for corporate & licensing matters)*.
-  * **Sophie Gravel**: `sophie.gravel@asmodee.com` / `s.gravel@asmodee.com` *(Asmodee executive corporate email format)*.
-  * *Note: Legacy email `csr@zmangames.com` bounced with 550 Access Denied as old domain mailboxes have been retired by Asmodee.*
-* **Status**: In-Progress Core Implementation; Awaiting Official Approval & High-Res Art
+  * **Lupe Gonzalez**: Senior Game Producer, Studio Big / Z-Man Games / Office Dog / Unexpected Games (Primary point of contact).
+  * **Britta Fisher**: Content Marketing Specialist, Studio Big (Connected us to Lupe Gonzalez).
+  * **Asmodee Corporate Contact Form**: Submitted via `asmodee-entertainment.biz` / Asmodee corporate contact.
+  * **Asmodee North America Business/Legal**: `inquiries@asmodeena.com`.
+* **Status**: Core Implementation Complete & Tested on BGA (`lordsofscotland`); Awaiting Publisher Response & High-Res Art.
 * **Next Actions**:
-  * Send inquiry to `inquiries@asmodeena.com` (and CC `sophie.gravel@asmodee.com`).
+  * Follow-up email prepared in `games/lordsofscotland/PUBLISHER_FOLLOW_UP_EMAIL.md` (to send to Lupe Gonzalez on Wednesday, Sep 30).
   * Keep logic and rules engine clean and ready for art swap.
 
 ---
@@ -87,6 +87,7 @@ This document tracks publisher/designer permissions, communications, contact inf
 | :--- | :--- | :--- |
 | **Cameron Browne** | Inventor (Yavalath, Ludi) | Direct Email |
 | **Néstor Romeral Andrés** | Founder, nestorgames | `orders@nestorgames.com` |
-| **Sophie Gravel** | Head of Studio, Z-Man Games | LinkedIn / via Z-Man CSR |
-| **Z-Man Support** | Customer Service / General | `csr@zmangames.com` |
+| **Lupe Gonzalez** | Senior Game Producer, Studio Big (Z-Man / Asmodee) | Follow-up pending (`PUBLISHER_FOLLOW_UP_EMAIL.md`) |
+| **Britta Fisher** | Content Marketing Specialist, Studio Big | Email intro from Z-Man |
+| **Sophie Gravel** | Former Head of Studio, Z-Man Games | LinkedIn / historical reference |
 | **Asmodee Licensing** | Interactive Licensing Team | Corporate Contact Form (`asmodee-entertainment.biz`) |

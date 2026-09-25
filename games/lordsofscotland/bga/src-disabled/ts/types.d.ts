@@ -1,8 +1,8 @@
-interface lordsofscotlandtestPlayer extends Player {
+interface lordsofscotlandPlayer extends Player {
     energy: number; // any information you add on each result['players']
 }
 
-interface lordsofscotlandtestGamedatas extends Gamedatas<lordsofscotlandtestPlayer> {
+interface lordsofscotlandGamedatas extends Gamedatas<lordsofscotlandPlayer> {
     // Add here variables you set up in getAllDatas
 }
    

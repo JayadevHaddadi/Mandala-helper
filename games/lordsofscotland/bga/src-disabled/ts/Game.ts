@@ -1,13 +1,13 @@
 import { PlayerTurn } from "./States/PlayerTurn";
 
 export class Game {
-    public bga: Bga<lordsofscotlandtestPlayer, lordsofscotlandtestGamedatas>;
-    private gamedatas: lordsofscotlandtestGamedatas;
+    public bga: Bga<lordsofscotlandPlayer, lordsofscotlandGamedatas>;
+    private gamedatas: lordsofscotlandGamedatas;
 
     private playerTurn: PlayerTurn;
 
-    constructor(bga: Bga<lordsofscotlandtestPlayer, lordsofscotlandtestGamedatas>) {
-        console.log('lordsofscotlandtest constructor');
+    constructor(bga: Bga<lordsofscotlandPlayer, lordsofscotlandGamedatas>) {
+        console.log('lordsofscotland constructor');
         this.bga = bga;
 
         // Declare the State classes
@@ -35,7 +35,7 @@ export class Game {
         "gamedatas" argument contains all datas retrieved by your "getAllDatas" PHP method.
     */
     
-    setup(gamedatas: lordsofscotlandtestGamedatas) {
+    setup(gamedatas: lordsofscotlandGamedatas) {
         console.log( "Starting game setup" );
         this.gamedatas = gamedatas;
 
