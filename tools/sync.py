@@ -67,6 +67,24 @@ def connect_sftp(host, port, username, password, max_retries=3, timeout=10):
                 time.sleep(3)
     raise ConnectionError(f"Failed to connect to {host}:{port} after {max_retries} attempts.")
 
+def rmtree_remote(sftp, remote_path):
+    """Recursively delete a remote directory and all its contents over SFTP."""
+    import stat
+    try:
+        for attr in sftp.listdir_attr(remote_path):
+            p = posixpath.join(remote_path, attr.filename)
+            if stat.S_ISDIR(attr.st_mode):
+                rmtree_remote(sftp, p)
+            else:
+                try:
+                    sftp.remove(p)
+                except Exception as e:
+                    print(f"Warning: Could not remove remote file {p}: {e}", flush=True)
+        sftp.rmdir(remote_path)
+        print(f"[PRUNE DIR] Successfully removed obsolete remote directory: {remote_path}", flush=True)
+    except Exception as e:
+        print(f"Warning: Could not remove remote directory {remote_path}: {e}", flush=True)
+
 def sync_directory(sftp, local_dir, remote_dir, dry_run=False, force=False):
     uploaded = 0
     skipped = 0
@@ -85,24 +103,6 @@ def sync_directory(sftp, local_dir, remote_dir, dry_run=False, force=False):
             print(f"[REMOTE INSPECT] Files in '{remote_dir}': {list(remote_attrs.keys())}", flush=True)
         except IOError:
             pass
-
-def rmtree_remote(sftp, remote_path):
-    """Recursively delete a remote directory and all its contents over SFTP."""
-    import stat
-    try:
-        for attr in sftp.listdir_attr(remote_path):
-            p = posixpath.join(remote_path, attr.filename)
-            if stat.S_ISDIR(attr.st_mode):
-                rmtree_remote(sftp, p)
-            else:
-                try:
-                    sftp.remove(p)
-                except Exception as e:
-                    print(f"Warning: Could not remove remote file {p}: {e}", flush=True)
-        sftp.rmdir(remote_path)
-        print(f"[PRUNE DIR] Successfully removed obsolete remote directory: {remote_path}", flush=True)
-    except Exception as e:
-        print(f"Warning: Could not remove remote directory {remote_path}: {e}", flush=True)
 
     # Automatically prune obsolete or legacy template files from remote SFTP if not in local_dir
     system_files = {"_ide_helper.php", "bga-framework.d.ts", ".", ".."}
